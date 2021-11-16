@@ -51,7 +51,7 @@ class Simulation():
         idxs = self.rnn.rng.choice(np.arange(0,len(tasks)), size=n_trials) # shuffle presentation of stimuli
         
         if plot:
-            fig = plt.figure(figsize=(6,6))
+            fig = plt.figure(figsize=(6,5))
             assert 'pos' in probe_types, "In order to plot position, must include 'pos' in probe_types"
         
         for count,idx in enumerate(idxs):
@@ -61,7 +61,7 @@ class Simulation():
             if plot and count % plot_freq == 0:
                 
                 #plt.plot(self.probes['pos'].squeeze()[:,0],self.probes['pos'].squeeze()[:,1],label='trial {}'.format(count))
-                fig = plot_position(fig=fig, pos=self.probes['pos'], tasks = tasks)
+                fig = plot_position(fig=fig, pos=self.probes['pos'], tasks = tasks, count=count, n_trials=n_trials, plot_freq=plot_freq)
     
         
     

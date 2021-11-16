@@ -183,14 +183,14 @@ class RNN():
         if self.driving_feedback:
             # note that feedback is position, which seems to do better than error
             if self.feedback_signal == 'position':
-                self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in) + np.dot(self.w_fb, self.pos) + self.sig_in*self.rng.randn(self.n_in,1)
+                self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) + np.dot(self.w_fb, self.pos) 
             
             # note that the feedback here is error, not position
             if self.feedback_signal == 'error':
-                self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in) + np.dot(self.w_fb, self.err) + self.sig_in*self.rng.randn(self.n_in,1)
+                self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) + np.dot(self.w_fb, self.err) 
 
         else:
-            self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1))
+            self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) 
 
         # updated step
         self.h = self.h + (-self.h + f(self.u) + self.sig_rec*self.rng.randn(self.n_rec,1))/self.tau_rec

@@ -45,6 +45,7 @@ class RFLO(LearningAlgorithm):
         Args:
             rnn (RNN): RNN object
             apply_to (list): list of weights to apply learning rule, e.g. 'w_rec' or 'w_in'
+            online (bool): whether learning rule is online (update every step) or offline (update at end of trial)
             
         Variables used to keep track of derivatives:
             p: eligibility trace for the recurrent weights
@@ -89,7 +90,6 @@ class RFLO(LearningAlgorithm):
         
         Args:
             index (int): trial step
-            online (bool): whether learning is occurring online (at every time step) or offline (at the end of the trial)
             task (Task): task object that specifies targets, trial duration, etc.
         
         Variables use to keep track of derivatives
@@ -174,6 +174,7 @@ class RFLO(LearningAlgorithm):
 
     # TODO: define this function
     def reset_learning_vars(self):
-        pass
+        
+        self.p = np.zeros((self.rnn.n_rec, self.rnn.n_rec)) # TODO: Check
             
             

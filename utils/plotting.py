@@ -11,7 +11,6 @@ from scipy import linalg as LA
 from tqdm import tqdm
 from itertools import cycle
 from copy import deepcopy
-
 import logging
 import warnings
 import dataclasses
@@ -27,7 +26,7 @@ from task import Task
 def interp_colors(dim,colormap='viridis'):
     
     """
-    interp colors from viri
+    interp colors from viridis colormap
     """
     cmap = plt.get_cmap(colormap)
     colors = np.asarray(cmap.colors)
@@ -69,7 +68,7 @@ def plot_position(fig, pos, tasks: List[Task], count: Optional[int] = None, n_tr
     
     
     
-    """ Plot Trajectory """
+    """ Plot Trajectory (position) """
     
     ax = fig.gca()
         
@@ -79,15 +78,13 @@ def plot_position(fig, pos, tasks: List[Task], count: Optional[int] = None, n_tr
         colors = interp_colors(dim,colormap='viridis')        
         ax.plot(pos.squeeze()[:,0],pos.squeeze()[:,1],color = colors[int(count/plot_freq)],alpha=0.5)
         
-        #print('dim=',dim)
-        #print('count/plot_freq',int(count/plot_freq))
-        
         if int(count/plot_freq) == int(n_trials/plot_freq)-1:
             cbar = insert_colorbar(fig,colormap='viridis',**kwargs)
     
     else:
     
         ax.plot(pos.squeeze()[:,0],pos.squeeze()[:,1])
+    
     #ax.set_title('RFLO, velocity={}, learning {}, {} trials'.format(net.velocity_transform,rflo.apply_to,i))
     
     for task in tasks:
@@ -99,24 +96,19 @@ def plot_position(fig, pos, tasks: List[Task], count: Optional[int] = None, n_tr
     ax.set_xlabel('position (x)')
     ax.set_ylabel('position (y)')
     ax.set_title('Trajectories During Training')
-    
-    
 
-    #ax.legend()
-    #plt.show()
-    
     return fig
 
 
 def plot_trained_trajectories(sim, tasks: List[Task],colors=cycle(['teal','C4','darkblue','tomato']),num_examples:int = 4, **kwargs):
     
+    """ Plot trajectories after training """
+    
     if 'fig' in kwargs.keys():
         fig = kwargs['fig']
         ax = fig.gca()
     else:
-        fig,ax = plt.subplots(1,1,figsize=(5,5),squeeze=True)
-        #ax = ax.ravel()
-    
+        fig,ax = plt.subplots(1,1,figsize=(5,5),squeeze=True)    
     
     for task in tasks:
         c = next(colors)
@@ -127,15 +119,10 @@ def plot_trained_trajectories(sim, tasks: List[Task],colors=cycle(['teal','C4','
 
     ax.set_xticks([-1,1])
     ax.set_yticks([-1,1])
-    #ax.plot(y[-1,0],y[-1,1],'X',color=c,markersize=10,linewidth=10)
     for task in tasks:
         c = next(colors)
-        #ax.scatter(task.y_target[0,:],task.y_target[1,:],s=100,marker='x',color='k')
         ax.plot(task.y_target[0,:],task.y_target[1,:],'X',color='k',markersize=10,linewidth=5)
     ax.plot([0],[0],'o',color='k',markersize=10,linewidth=1)
-    #ax[i].set_xlim(-1.1,1.1)
-    #ax[i].set_ylim(-1.1,1.1)
-    #ax[1].set_title(titles[])
     ax.set_title('Trajectories after Training')
     ax.axis('off')
     

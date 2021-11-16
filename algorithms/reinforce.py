@@ -11,24 +11,25 @@ from scipy import linalg as LA
 from tqdm import tqdm
 from itertools import cycle
 from copy import deepcopy
-
 import logging
 import warnings
 import dataclasses
 from dataclasses import dataclass
 from typing import Optional, List
 
+# custom
 from algorithms.base import LearningAlgorithm
 from rnn import RNNparams, RNN
 from task import Task
-
 from utils.functions import f, df, theta, rgetattr
 
             
 class REINFORCE(LearningAlgorithm):
     
     """
-    REINFORCE (Miconi 2017)
+    REINFORCE 
+    
+    This is a reinforcement learning (RL) rule based on the paper (Miconi 2017)
     
     
     """

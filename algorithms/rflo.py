@@ -11,13 +11,13 @@ from scipy import linalg as LA
 from tqdm import tqdm
 from itertools import cycle
 from copy import deepcopy
-
 import logging
 import warnings
 import dataclasses
 from dataclasses import dataclass
 from typing import Optional, List
 
+# custom
 from algorithms.base import LearningAlgorithm
 from rnn import RNNparams, RNN
 from task import Task
@@ -30,6 +30,9 @@ class RFLO(LearningAlgorithm):
     """
     Random Feedback Local Online Learning
     
+    RFLO is a supervised learning rule for RNNs that is an approximation to RTRL (Real Time Recurrent Learning) and is
+    related to BPTT (Backpropagation Through Time).
+    
     This implementation is adapted from Murray 2019 "Local online learning in recurrent networks with random feedback"
     (see https://github.com/murray-lab/rflo-learning for more details)
     """
@@ -40,8 +43,8 @@ class RFLO(LearningAlgorithm):
         Initialize learning rule and set which weights to apply to
         
         Args:
-            rnn (RNN):
-            apply_to (list): list of weights to apply learning rule, e.g. w_rec
+            rnn (RNN): RNN object
+            apply_to (list): list of weights to apply learning rule, e.g. 'w_rec' or 'w_in'
             
         Variables used to keep track of derivatives:
             p: eligibility trace for the recurrent weights
@@ -85,30 +88,33 @@ class RFLO(LearningAlgorithm):
         Update variables associated with learning
         
         Args:
-            index (int): step index
+            index (int): trial step
             online (bool): whether learning is occurring online (at every time step) or offline (at the end of the trial)
-            task (Task): Task object that specifies targets, trial duration, etc.
+            task (Task): task object that specifies targets, trial duration, etc.
         
         Variables use to keep track of derivatives
-            dw_out:
-            dw_rec:
-            dw_in:
+            dw_out: change in the output weights
+            dw_rec: change in the recurrent weights
+            dw_in: change in input weights
+            dw_fb: change in feedback weights
         """
         
         # pointer for convenience
         rnn = self.rnn
         t_max = task.trial_duration
         
-        # predefined teaching signal
+        # TODO: Allow for predefined teaching signal for error calculation
         #rnn.err = np.expand_dims(task.y_teaching_signal[index],1) - rnn.pos
         
         """ Error based on final target position """
-        #rnn.err = (index/task.trial_duration) * (task.y_target - rnn.pos)/np.linalg.norm(task.y_target - rnn.pos)
+        # scaled error based on time left in trial
         rnn.err = (1/(task.trial_duration-index)) * (task.y_target - rnn.pos)
+        
+        # TODO: Alternative errors
+        #rnn.err = (index/task.trial_duration) * (task.y_target - rnn.pos)/np.linalg.norm(task.y_target - rnn.pos)
         #rnn.err = (task.y_target - rnn.pos)
         
         
-
         if 'w_rec' in self.apply_to: 
             self.p = (1-1/rnn.tau_rec)*self.p
             self.p += np.outer(df(rnn.u), rnn.h_prev)/rnn.tau_rec
@@ -117,16 +123,19 @@ class RFLO(LearningAlgorithm):
             self.q += np.outer(df(rnn.u), rnn.x_in_prev)/rnn.tau_rec  
         if 'w_fb' in self.apply_to:
             self.p_fb = (1-1/rnn.tau_rec)*self.p_fb
-            #self.p_fb += np.outer(df(rnn.u), rnn.y_prev)/rnn.tau_rec
             self.p_fb += np.outer(df(rnn.u), rnn.pos)/rnn.tau_rec
+            
+            # TODO: Correct for velocity transformation (check)
+            #self.p_fb += np.outer(df(rnn.u), rnn.y_prev)/rnn.tau_rec
 
-        # this should probably be stored in an Optimizer class
+
         if self.online:
             
-#             if rnn.velocity_transform:
-#                 dw_out *= rnn.dt_vel/rnn.tau_vel
-#                 dw_rec *= rnn.dt_vel/rnn.tau_vel
-#                 dw_in *= rnn.dt_vel/rnn.tau_vel
+            # TODO: Check factor in derivative due to velocity transform
+            #if rnn.velocity_transform:
+            #    dw_out *= rnn.dt_vel/rnn.tau_vel
+            #    dw_rec *= rnn.dt_vel/rnn.tau_vel
+            #    dw_in *= rnn.dt_vel/rnn.tau_vel
             
             if 'w_out' in self.apply_to:
                 self.dw_out = rnn.eta_out/t_max*np.outer(rnn.err, rnn.h)
@@ -162,13 +171,8 @@ class RFLO(LearningAlgorithm):
                 rnn.w_in = rnn.w_in + self.dw_in
             if 'w_fb' in self.apply_to:
                 rnn.w_fb = rnn.w_fb + self.dw_fb
-                
-                
-            
-                
-            # include W_fb here
-        # TODO: for offline learning, need to update at the end of the trial!
 
+    # TODO: define this function
     def reset_learning_vars(self):
         pass
             

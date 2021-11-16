@@ -22,7 +22,6 @@ from rnn import RNNparams, RNN
 from utils.plotting import plot_position
 from task import Task
 from algorithms.base import LearningAlgorithm
-
 from utils.functions import rgetattr
 
 
@@ -31,11 +30,11 @@ class Simulation():
     """
     Run Simulations with trial and session structure
     
-    The general structure of this class, and probes/monitors in particular, are directly inspired 
-    from Owen Marschall https://github.com/omarschall/vanilla-rtrl/
+    Some of the structure of this class, and probes/monitors in particular, are inspired by
+    Owen Marschall's repository here https://github.com/omarschall/vanilla-rtrl/
     
     Args:
-        rnn (RNN):
+        rnn (RNN): an instantiated RNN object
     """
     
     def __init__(self,rnn: RNN) -> None:
@@ -43,7 +42,22 @@ class Simulation():
         self.rnn = rnn
         
         
-    def run_session(self,n_trials: int, tasks: List[Task], learn_alg: List[str], probe_types: List[str], plot: bool = True, plot_freq: int = 10) -> None:
+    def run_session(self, n_trials: int, tasks: List[Task], learn_alg: List[str], probe_types: List[str], plot: bool = True, plot_freq: int = 10) -> None:
+        
+        """ Run a full training session
+        
+        This function runs training across multiple tasks using a set of learning algorithms.
+        The learning algorithms can be specified for each set of weights. Tasks are randomly
+        shuffled during training.
+        
+        Args:
+            n_trials (int): number of total trials
+            tasks (list): list of Task objects
+            learn_alg (list): list of LearningAlgorithm objects specified for a set of weights
+            probe_types (list): list of rnn attributes to monitor
+            plot (bool): whether to plot trajectories during session
+            plot_freq (int): if plotting, how often to plot trajectories
+        """
         
         """ Shuffle Indices for tasks """
         idxs = self.rnn.rng.choice(np.arange(0,len(tasks)), size=n_trials) # shuffle presentation of stimuli
@@ -54,11 +68,10 @@ class Simulation():
         
         for count,idx in enumerate(idxs):
             
+            """ Run a single trial """
             self.run_trial(tasks[idx],learn_alg=learn_alg,probe_types=probe_types,train=True)
             
             if plot and count % plot_freq == 0:
-                
-                #plt.plot(self.probes['pos'].squeeze()[:,0],self.probes['pos'].squeeze()[:,1],label='trial {}'.format(count))
                 fig = plot_position(fig=fig, pos=self.probes['pos'], tasks = tasks, count=count, n_trials=n_trials, plot_freq=plot_freq)
     
         
@@ -67,19 +80,16 @@ class Simulation():
                   train: bool=True, 
                   learn_alg: List[LearningAlgorithm]=[], 
                   probe_types: List[str]=[]) -> None:
-        """
-        Run Trial
+        """ Run Trial
         
-        Run forward as many timesteps as necessary, in either train or test mode
-        depending on the learning rule, this can run through full trial
+        Run forward as many timesteps as necessary, in either train or test mode.
+        Note that the length of the trial is specified by the Task object.
         
-        Length of the trial is specified by Task
-        
-        Arguments
+        Args:
             task (Task): task object that contains details of target, trial duration, etc.
-            train (bool): whether in training mode
-            learn_alg (List[LearningAlgorithm]): , default = []
-            probe_types (list): 
+            train (bool): whether in training mode or test mode
+            learn_alg (list): list of LearningAlgorithm objects that specify the learning rules for a set of weights
+            probe_types (list): list of rnn properties to monitor (e.g. 'pos')
         """
         
         assert self.rnn.n_in == task.x_in.shape[1], 'Task non temporal input must match RNN input dimensions'
@@ -89,15 +99,17 @@ class Simulation():
             
         self.learn_alg = learn_alg
         
-        # initialize probes
+        # Initialize probes
         self.probe_types = probe_types
         self.probes = {probe:[] for probe in self.probe_types}
         
         """ Begin Trial """
-        for tt in range(task.trial_duration): # note this used to be trial_duration-1
+        for tt in range(task.trial_duration):
             
-            self.forward_step(task.x_in[tt]) # all it gets is external input 
+            self.forward_step(task.x_in[tt]) # the only value passed in is external input at time tt
             
+            """ training step """
+            # if offline training, then the weight update will only occur at the end of the trial
             if train:
                 self.train_step(tt,train,task)
         
@@ -109,7 +121,7 @@ class Simulation():
         
     
     def forward_step(self, x) -> None:
-        """ run network forward one step"""
+        """ Run network forward one step """
         
         # pointer for convenience
         rnn = self.rnn
@@ -126,10 +138,10 @@ class Simulation():
         Note that this can apply multiple learning rules to multiple matrices.
         It is incumbent on the user to ensure that there are no conflicts between learning rules
         
-        Arguments
-            index (int):
-            train (bool):
-            task (Task):
+        Args:
+            index (int): the trial step
+            train (bool): whether in training mode
+            task (Task): a single Task object
         """
         
         for learn_alg in self.learn_alg:
@@ -137,8 +149,12 @@ class Simulation():
         
         
     def update_probes(self):
-        """Loops through the probe keys and appends current value of any
-        object's attribute found."""
+        """ Update Probes
+        
+        Loops through the probe keys and appends current value of any
+        object's attribute found
+        
+        """
 
         for key in self.probes:
             try:
@@ -148,8 +164,11 @@ class Simulation():
                 pass
             
     def probes_to_arrays(self):
-        """Recasts monitors (lists by default) as numpy arrays for ease of use
-        after running."""
+        """ Cast probes as arrays
+        
+        Recasts monitors (lists by default) as numpy arrays for ease of use
+        after running 
+        """
 
         for key in self.probes:
             try:
@@ -159,7 +178,7 @@ class Simulation():
         
     def reset_trial(self):
         
-        """ Reset some parameters 
+        """ Reset some trial parameters 
         
         This is particularly important at the end of a trial
         """

@@ -11,13 +11,13 @@ from scipy import linalg as LA
 from tqdm import tqdm
 from itertools import cycle
 from copy import deepcopy
-
 import logging
 import warnings
 import dataclasses
 from dataclasses import dataclass
 from typing import Optional, List
 
+# custom
 from rnn import RNNparams, RNN
 from utils.plotting import plot_position
 from task import Task
@@ -34,10 +34,8 @@ class Simulation():
     The general structure of this class, and probes/monitors in particular, are directly inspired 
     from Owen Marschall https://github.com/omarschall/vanilla-rtrl/
     
-    Attributes:
-        rnn:
-        probe_types
-        probes
+    Args:
+        rnn (RNN):
     """
     
     def __init__(self,rnn: RNN) -> None:

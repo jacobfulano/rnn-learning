@@ -2,6 +2,8 @@
 Mixing and matching biologically plausible learning rules for vanilla RNNs
 
 
+Note that the following repository is a work in progress. Please contact j.portes@columbia.edu for more details.
+
 ![RNN schematic](graphics/rnn-schematic.png)
 
 -----

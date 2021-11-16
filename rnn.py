@@ -31,11 +31,25 @@ class RNNparams():
         n_in (int): dimension of inputs
         n_rec (int): dimension of recurrent units
         n_out (int): dimension of output
+        
+        sig_in (float): noise scale of input weights
+        sig_rec (float): noise scale of recurrent weights
+        sig_out (float): noise scale of output weights
+    
         tau_rec (float): time constant for recurrent weights
-        tau_vel (float): time constant for velocity transformation
-        tau_reward (float): time constant for reward (RL)
+        
+        eta_in (float): learning rate for input weights
+        eta_rec (float): learning rate for recurrent weights
+        eta_out (float): learning rate for output weights
+                
         driving_feedback (bool): whether there is driving feedback
+        eta_fb (float): learning rate for feedback weights
+        feedback_signal (str):
+    
         velocity_transform (bool): whether to apply low pass filter to neural readout
+        tau_vel (float): time constant for velocity transformation
+        dt_vel (float):
+        
         rng: random number generator
     """
     
@@ -76,18 +90,17 @@ class RNN():
     """
     RNN class
     
-    Initialize Weights
+    This class also holds the current state of the RNN, and the function
+    'next_state' advances the RNN to the next state.
     
-    Perform surgery and insert/set weights
+    Class functions can also initialize weights and insert/set weights.
     
-    Advance to next RNN state
-    
-    Arguments
+    Args:
         params (RNNparams): dataclass object that stores hyperparameters for network
         init (boolean): if true, initialize weights. default=True
     """
     
-    def __init__(self, params: RNNparams,init=True):
+    def __init__(self, params: RNNparams,init=True) -> None:
         for key, value in dataclasses.asdict(params).items():
             setattr(self, key, value)
         
@@ -104,7 +117,6 @@ class RNN():
         
         if self.velocity_transform:
             self.vel = np.zeros((self.n_out,1))
-            
             assert self.dt_vel, "If applying a velocity transform, dt_vel must be specified"
         else:
             self.vel = None
@@ -113,7 +125,7 @@ class RNN():
             assert self.eta_fb is not None, "If driving feebdack, eta_fb must be set"
             assert self.feedback_signal in ['position','error'], "Must specify if feedback_signal from {'position','error'}"
             
-        # TO DO I don't want this to be here, but think it is necessary for probes?
+        # TO DO: I don't want this to be here, but think it is necessary for probes
         self.r = None
         self.r_current = None
         self.err = np.zeros((self.n_out,1))
@@ -122,7 +134,7 @@ class RNN():
          
     def initialize_weights(self) -> None:
         
-        """ Initialize weights with random number generator """
+        """ Initialize all weights with random number generator """
     
         self.w_in = 2*(self.rng.rand(self.n_rec, self.n_in) - 1) # changed from 0.1
         self.w_rec = 1.5*self.rng.randn(self.n_rec, self.n_rec)/self.n_rec**0.5 # --> 1 changed from 1.5 # why randn instead of rand?
@@ -138,9 +150,11 @@ class RNN():
                     w_rec: Optional[np.array]=None, 
                     w_out: Optional[np.array]=None, 
                     w_m: Optional[np.array]=None,
-                    w_fb: Optional[np.array]=None):
+                    w_fb: Optional[np.array]=None) -> None:
         
         """ Set weights with predefined values 
+        
+        The weight(s) to set must be specified
         
         Args:
             w_in: input matrix
@@ -168,13 +182,15 @@ class RNN():
             assert w_fb.shape == (self.n_rec,self.n_out), 'Dimensions must be (n_rec,n_out)'
             self.w_fb = w_fb
     
-    # needs to specify 
-    def next_state(self, x_in: np.array): # could be array
-        """ Advance the network forward by one step 
+    
+    def next_state(self, x_in: np.array) -> None:
+        """ 
+        Advance the network forward by one step 
         
-        Args
-        x_in: external input
+        Note that this is the basic RNN activity equation
         
+        Args:
+            x_in (np.array): external input
         """
         
         self.h_prev = np.copy(self.h)
@@ -182,28 +198,31 @@ class RNN():
         
         """ recurrent activity """                        
         if self.driving_feedback:
-            # note that feedback is position, which seems to do better than error
+            # Feedback signal is position (which seems to do better than error)
             if self.feedback_signal == 'position':
                 self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) + np.dot(self.w_fb, self.pos) 
             
-            # note that the feedback here is error, not position
+            # Feedback signal here is error, not position
             if self.feedback_signal == 'error':
                 self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) + np.dot(self.w_fb, self.err) 
 
         else:
             self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) 
 
-        # updated step
+        # update step
         self.h = self.h + (-self.h + f(self.u) + self.sig_rec*self.rng.randn(self.n_rec,1))/self.tau_rec
         
         self.x_in = x_in
-        #sensory_feedback = np.dot(self.w_fb,pos[tt]-y_ + self.sig_fb*self.noise_rng.randn(len(y[tt]))) 
-
        
 
     def output(self) -> None:
         
-        """ velocity transform """
+        """ Readout of the RNN
+        
+        If there is no velocity transform, the readout is just
+        a mapping from the RNN activity directly to the position
+        via the matrix 'w_out'
+        """
         
         self.y_prev = np.copy(self.y_out)
         

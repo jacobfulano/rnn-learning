@@ -25,7 +25,7 @@ from utils.functions import f, df, theta, rgetattr
 class RNNparams():
     
     """
-    Hyperparameter class for RNN
+    Hyperparameter class for vanilla RNN
     
     Attributes:
         n_in (int): dimension of inputs
@@ -52,11 +52,12 @@ class RNNparams():
     tau_rec: float
         
     """ learning rates for each population """
-    # note that this does not mean
+    # note that this does not mean that the RNN necessarily learns
     eta_in: Optional[float] = None
     eta_rec: Optional[float] = None
     eta_out: Optional[float] = None
     
+    """ driving feedback parameters """
     driving_feedback: bool = False
     eta_fb: Optional[float] = None # learning rate for feedback weights
     feedback_signal: Optional[str] = 'position'

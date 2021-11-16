@@ -2,21 +2,17 @@ import numpy as np
 import logging
 import warnings
 import dataclasses
-from dataclasses import dataclass
-from typing import Optional, List
-
-
-
 from dataclasses import dataclass, field
+from typing import Optional, List
 
 @dataclass
 class Task():
     """
-    Task Class
+    Task
     
-    Should contain targets, specification of time to run task?
-
-    N.B. what is SL signal is calculated on the fly?
+    This class associates an input signal with a "reach" target in x,y coordinates. 
+    Optionally, a teaching signal 'y_teaching_signal' can be specified for each 
+    step
     """
     
     x_in: np.array

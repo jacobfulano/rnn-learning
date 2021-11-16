@@ -2,6 +2,8 @@
 Mixing and matching biologically plausible learning rules for vanilla RNNs
 
 
+![RNN schematic](graphics/rnn-schematic.png)
+
 -----
 The general structure of the `simulation` class, and probes/monitors in particular, are directly inspired by Owen Marschall's repo https://github.com/omarschall/vanilla-rtrl/
 

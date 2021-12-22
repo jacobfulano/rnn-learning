@@ -97,6 +97,8 @@ class RFLO(LearningAlgorithm):
             dw_rec: change in the recurrent weights
             dw_in: change in input weights
             dw_fb: change in feedback weights
+            
+        TODO: I need to be able to update w_m (e.g. setting equivalent to w_out if w_out is learned) 
         """
         
         # pointer for convenience

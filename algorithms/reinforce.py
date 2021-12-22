@@ -107,6 +107,8 @@ class REINFORCE(LearningAlgorithm):
             if 'w_rec' in self.apply_to: 
                 rnn.w_rec = rnn.w_rec + dw_rec
                 
+        # TO DO: ADD FOR w_in, w_out and w_fb
+                
         """ At the end of the trial """
         if not self.online and index == task.trial_duration-1:
             

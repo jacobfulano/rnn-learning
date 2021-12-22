@@ -51,6 +51,8 @@ class RNNparams():
         dt_vel (float):
         
         rng: random number generator
+        
+    TODO: Feedback noise
     """
     
     """ number of units at each layer """
@@ -74,6 +76,7 @@ class RNNparams():
     """ driving feedback parameters """
     driving_feedback: bool = False
     eta_fb: Optional[float] = None # learning rate for feedback weights
+    sig_fb: Optional[float] = None
     feedback_signal: Optional[str] = 'position'
     
     """ velocity transform """
@@ -124,6 +127,7 @@ class RNN():
         if self.driving_feedback:
             assert self.eta_fb is not None, "If driving feebdack, eta_fb must be set"
             assert self.feedback_signal in ['position','error'], "Must specify if feedback_signal from {'position','error'}"
+            assert self.sig_fb is not None, "If driving feedback, sig_fb must be set"
             
         # TO DO: I don't want this to be here, but think it is necessary for probes
         self.r = None
@@ -200,11 +204,11 @@ class RNN():
         if self.driving_feedback:
             # Feedback signal is position (which seems to do better than error)
             if self.feedback_signal == 'position':
-                self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) + np.dot(self.w_fb, self.pos) 
+                self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) + np.dot(self.w_fb, self.pos + self.sig_fb*self.rng.randn(self.n_out,1)) 
             
             # Feedback signal here is error, not position
             if self.feedback_signal == 'error':
-                self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) + np.dot(self.w_fb, self.err) 
+                self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) + np.dot(self.w_fb, self.err + self.sig_fb*self.rng.randn(self.n_out,1)) 
 
         else:
             self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) 

@@ -108,7 +108,12 @@ def plot_trained_trajectories(sim, tasks: List[Task],colors=cycle(['teal','C4','
         fig = kwargs['fig']
         ax = fig.gca()
     else:
-        fig,ax = plt.subplots(1,1,figsize=(5,5),squeeze=True)    
+        fig,ax = plt.subplots(1,1,figsize=(5,5),squeeze=True) 
+        
+    if 'title' in kwargs.keys():
+        title = kwargs['title']
+    else:
+        title = 'Trajectories after Training'
     
     for task in tasks:
         c = next(colors)
@@ -123,7 +128,7 @@ def plot_trained_trajectories(sim, tasks: List[Task],colors=cycle(['teal','C4','
         c = next(colors)
         ax.plot(task.y_target[0,:],task.y_target[1,:],'X',color='k',markersize=10,linewidth=5)
     ax.plot([0],[0],'o',color='k',markersize=10,linewidth=1)
-    ax.set_title('Trajectories after Training')
+    ax.set_title(title)
     ax.axis('off')
     
     return fig

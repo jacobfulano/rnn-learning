@@ -71,8 +71,8 @@ class BPTT(LearningAlgorithm):
         self.apply_to = apply_to
         self.online = online
         
-        # TO DO: Keep track of error across all timesteps
-        self.err_history = [] #should eventually be size np.zeros((t_max, self.rnn.n_out))  # readout error
+        # Keep track of error, u, x_in and h across all timesteps
+        self.err_history = [] #should eventually be size np.zeros((t_max, self.rnn.n_out))  
         self.u_history = []
         self.x_in_history = []
         self.h_history = []
@@ -138,23 +138,28 @@ class BPTT(LearningAlgorithm):
                 z[tt-1] += np.dot(z[tt]*df(self.u_history[tt]), rnn.w_rec)/rnn.tau_rec
 
                 # Updates for the weights:
-                self.dw_out += rnn.eta_out*np.outer(self.err_history[tt], self.h_history[tt])/t_max
-                self.dw_rec += rnn.eta_rec/(t_max*rnn.tau_rec)*np.outer(z[tt]*df(self.u_history[tt]),
+                if 'w_out' in self.apply_to:
+                    self.dw_out += rnn.eta_out*np.outer(self.err_history[tt], self.h_history[tt])/t_max
+                
+                if 'w_rec' in self.apply_to:
+                    self.dw_rec += rnn.eta_rec/(t_max*rnn.tau_rec)*np.outer(z[tt]*df(self.u_history[tt]),
                                                             self.h_history[tt-1])
-                self.dw_in += rnn.eta_in/(t_max*rnn.tau_rec)*np.outer(z[tt]*df(self.u_history[tt]),
+                if 'w_in' in self.apply_to:
+                    self.dw_in += rnn.eta_in/(t_max*rnn.tau_rec)*np.outer(z[tt]*df(self.u_history[tt]),
                                                            self.x_in_history[tt])
                 
                 # TO DO: ADD RULE FOR W_FB
                 
-            
+            # Update weights after unrolling in time
             if 'w_out' in self.apply_to:
                 rnn.w_out = rnn.w_out + self.dw_out
             if 'w_rec' in self.apply_to: 
                 rnn.w_rec = rnn.w_rec + self.dw_rec
             if 'w_in' in self.apply_to:
                 rnn.w_in = rnn.w_in + self.dw_in
-            if 'w_fb' in self.apply_to:
-                rnn.w_fb = rnn.w_fb + self.dw_fb
+            
+            #if 'w_fb' in self.apply_to:
+            #    rnn.w_fb = rnn.w_fb + self.dw_fb
                 
             self.reset_learning_vars()
 

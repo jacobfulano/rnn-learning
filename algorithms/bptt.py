@@ -59,6 +59,9 @@ class BPTT(LearningAlgorithm):
         # TODO check that weight flags match weights in rnn
         assert apply_to != [], 'Must specify which weights to apply learning rule to with "apply_to"'
         
+        for a in apply_to:
+            assert a in ['w_in','w_rec','w_out','w_fb'], "specified weights must be selected from ['w_in','w_rec','w_out','w_fb']"
+            
         if 'w_in' in apply_to:
             assert rnn.eta_in, "eta_in must be specified if learning is occurring in w_in"
         if 'w_rec' in apply_to:
@@ -67,6 +70,8 @@ class BPTT(LearningAlgorithm):
             assert rnn.eta_out, "eta_out must be specified if learning is occurring in w_out"
         if 'w_fb' in apply_to:
             assert rnn.eta_fb, "eta_fb must be specified if learning is occurring in w_fb"
+            
+        
         
         self.apply_to = apply_to
         self.online = online

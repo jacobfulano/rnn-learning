@@ -43,12 +43,14 @@ class REINFORCE(LearningAlgorithm):
         p: eligibility trace for the recurrent weights
             
     TODO: Currently only implemented for w_rec. Need to implement for w_in, w_fb and w_out
+    
+    TODO: SOMETHING IS CURRENTLY WRONG WITH MULTI-TASK TRAINING
     """
     
     def __init__(self, rnn: RNN, sig_xi: float, tau_reward: float, apply_to: List[str]=['w_rec'], online: bool = True) -> None:
         
         
-        # variablce necessary for this RL algorithms
+        # variable necessary for this RL algorithm
         self.sig_xi = sig_xi # noise scale
         self.tau_reward = tau_reward # timescale of reward
         
@@ -56,12 +58,29 @@ class REINFORCE(LearningAlgorithm):
         self.rnn = rnn
         self.p = np.zeros((self.rnn.n_rec, self.rnn.n_rec))
         
-        self.r_av = 0 # should be a vector dependent on the task
-        self.r_av_prev = 0 # should be a vector dependent on the task
+        self.r_av = [] # should be a vector dependent on the task
+        self.r_av_prev = [] # should be a vector dependent on the task
         self.rnn.r_current = 0
         
-        # TODO check that weight flags match weights in rnn
-        assert apply_to, 'Must specify which weights to apply learning rule to with "apply_to"'
+        self.all_tasks = [] # keeps track of unique tasks (when training with multiple tasks)
+        self.task_idx = None
+        
+        assert apply_to != [], 'Must specify which weights to apply learning rule to with "apply_to"'
+        
+        # check that weight flags match weights in rnn
+        for a in apply_to:
+            assert a in ['w_in','w_rec','w_out','w_fb'], "specified weights must be selected from ['w_in','w_rec','w_out','w_fb']"
+            
+        # TO DO: incorporate for w_in, w_out, w_fb
+        #if 'w_in' in apply_to:
+        #    assert rnn.eta_in, "eta_in must be specified if learning is occurring in w_in"
+        if 'w_rec' in apply_to:
+            assert rnn.eta_rec, "eta_rec must be specified if learning is occurring in w_rec"
+        #if 'w_out' in apply_to:
+        #    assert rnn.eta_out, "eta_out must be specified if learning is occurring in w_out"
+        #if 'w_fb' in apply_to:
+        #    assert rnn.eta_fb, "eta_fb must be specified if learning is occurring in w_fb"
+                
         self.apply_to = apply_to
         self.online = online
                 
@@ -86,6 +105,15 @@ class REINFORCE(LearningAlgorithm):
             dw_fb: change in feedback weights
         """
         
+        """ Keep separate running average for each task """
+        if index == 0: # this only needs to be calculated at the beginning of the trial
+            self.task_idx = self._track_tasks(task)
+        
+        task_idx = self.task_idx
+
+        
+                    
+        
         # pointer for convenience
         rnn = self.rnn
         t_max = task.trial_duration
@@ -100,9 +128,10 @@ class REINFORCE(LearningAlgorithm):
             
         if self.online:
             
+            
             rnn.r_current = -(np.linalg.norm(task.y_target-rnn.pos))**2
             
-            dw_rec = rnn.eta_rec * (rnn.r_current - self.r_av)*self.p/t_max
+            dw_rec = rnn.eta_rec * (rnn.r_current - self.r_av[task_idx])*self.p/t_max
             
             if 'w_rec' in self.apply_to: 
                 rnn.w_rec = rnn.w_rec + dw_rec
@@ -112,9 +141,11 @@ class REINFORCE(LearningAlgorithm):
         """ At the end of the trial """
         if not self.online and index == task.trial_duration-1:
             
+            print(task.y_target)
+            
             rnn.r_current = -(np.linalg.norm(task.y_target - rnn.pos))**2
             
-            dw_rec = rnn.eta_rec * (rnn.r_current - self.r_av)*self.p
+            dw_rec = rnn.eta_rec * (rnn.r_current - self.r_av[task_idx])*self.p
     
             if 'w_rec' in self.apply_to: 
                 rnn.w_rec = rnn.w_rec + dw_rec
@@ -122,8 +153,11 @@ class REINFORCE(LearningAlgorithm):
         """ At end of trial, update average reward"""
         # TODO: This needs to be implemented for multiple targets
         if index == task.trial_duration-1:
-            self.r_av = self.r_av_prev + (1/self.tau_reward) * (rnn.r_current-self.r_av_prev)
-            self.r_av_prev = np.copy(self.r_av)
+            
+            self.r_av[task_idx] = self.r_av_prev[task_idx] + (1/self.tau_reward) * (rnn.r_current-self.r_av_prev[task_idx])
+            self.r_av_prev[task_idx] = np.copy(self.r_av[task_idx])
+            
+            #print('r_av',self.r_av)
             
             
 
@@ -132,7 +166,27 @@ class REINFORCE(LearningAlgorithm):
         """ Reset variables """
         
         self.p = np.zeros((self.rnn.n_rec, self.rnn.n_rec))
-        self.rnn.r_av = 0
-        self.rnn.r_av_prev = 0
+        self.rnn.r_av = []
+        self.rnn.r_av_prev = []
         self.rnn.r_current = 0
+     
+    
+    def _track_tasks(self,task):
+            
+        """ Keep track of which task is being used for training """
+        
+        task_bool = [np.array_equal(ts.y_target,task.y_target) for ts in self.all_tasks]
+
+        if np.any(task_bool):
+            task_idx = np.argwhere(task_bool).squeeze()
+
+        else:
+            self.all_tasks.append(task)
+            self.r_av.append(0)
+            self.r_av_prev.append(0)
+            
+            task_idx = len(self.all_tasks)-1
+
+                    
+        return task_idx
     

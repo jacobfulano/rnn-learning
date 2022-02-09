@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 # analysis
 from sklearn.decomposition import PCA, FactorAnalysis
@@ -19,11 +20,12 @@ from typing import Optional, List
 
 # custom
 from rnn import RNNparams, RNN
-from utils.plotting import plot_position
+from utils.plotting import plot_position, plot_loss
 from task import Task
 from algorithms.base import LearningAlgorithm
 from utils.functions import rgetattr
 
+mpl.rcParams.update({'font.size': 14}) # set default font size
 
 class Simulation():
     
@@ -59,21 +61,51 @@ class Simulation():
             plot_freq (int): if plotting, how often to plot trajectories
         """
         
+        """ Store probes over full session """
+        session_probes = {}
+        for key in probe_types:
+            session_probes[key] = []
+        
         """ Shuffle Indices for tasks """
         idxs = self.rnn.rng.choice(np.arange(0,len(tasks)), size=n_trials) # shuffle presentation of stimuli
         
+        # keeping track of probes for plotting during session
+        # The user doesn't have to store pos or loss in order to plot them)
+        probe_types_all = probe_types
+        
         if plot:
-            fig = plt.figure(figsize=(6,5))
-            assert 'pos' in probe_types, "In order to plot position, must include 'pos' in probe_types"
+            fig1 = plt.figure(figsize=(6,5))
+            if 'pos' not in probe_types:
+                probe_types_all = probe_types_all + ['pos'] # append
+            
+            if 'loss' not in probe_types:
+                probe_types_all = probe_types_all + ['loss'] # append
+                
+            loss = []
+
+            assert 'pos' in probe_types_all, "In order to plot position, must include 'pos' in probe_types"
+            assert 'loss' in probe_types_all, "In order to plot position, must include 'loss' in probe_types"
+        
+        
         
         for count,idx in tqdm(enumerate(idxs)):
             
             """ Run a single trial """
-            self.run_trial(tasks[idx],learn_alg=learn_alg,probe_types=probe_types,train=True)
+            self.run_trial(tasks[idx],learn_alg=learn_alg,probe_types=probe_types_all,train=True)
             
+            if plot:
+                loss.append(np.mean(self.probes['loss']))
             if plot and count % plot_freq == 0:
-                fig = plot_position(fig=fig, pos=self.probes['pos'], tasks = tasks, count=count, n_trials=n_trials, plot_freq=plot_freq)
-    
+                fig1 = plot_position(fig=fig1, pos=self.probes['pos'], tasks = tasks, count=count, n_trials=n_trials, plot_freq=plot_freq)
+                
+            
+            for key in probe_types:
+                session_probes[key].append(self.probes[key]) # append array to list
+                
+        self.session_probes = session_probes
+        
+        if plot:
+            plot_loss(loss=loss)
         
     
     def run_trial(self, task: Task, 

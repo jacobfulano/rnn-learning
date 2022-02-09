@@ -119,6 +119,7 @@ class RFLO(LearningAlgorithm):
         """ Error based on final target position """
         # scaled error based on time left in trial
         rnn.err = (1/(task.trial_duration-index)) * (task.y_target - rnn.pos)
+        rnn.loss = 0.5*np.linalg.norm(rnn.err)**2
         
         # TODO: Alternative errors
         #rnn.err = (index/task.trial_duration) * (task.y_target - rnn.pos)/np.linalg.norm(task.y_target - rnn.pos)

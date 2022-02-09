@@ -121,6 +121,7 @@ class BPTT(LearningAlgorithm):
         """ Error based on final target position """
         # scaled error based on time left in trial
         rnn.err = (1/(t_max-index)) * (task.y_target - rnn.pos)
+        rnn.loss = 0.5*np.linalg.norm(rnn.err)**2
         
         self.err_history.append(np.copy(rnn.err))
         self.u_history.append(np.copy(rnn.u))

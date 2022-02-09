@@ -48,6 +48,7 @@ class BPTT(LearningAlgorithm):
             
         """
         print('>> TODO: Learning rule for w_fb not currently implemented for BPTT')
+        print('>> TODO: implement weight_transport=False (of w_m) for BPTT')
         
         
         self.rnn = rnn

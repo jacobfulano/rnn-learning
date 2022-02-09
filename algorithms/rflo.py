@@ -46,6 +46,7 @@ class RFLO(LearningAlgorithm):
             rnn (RNN): RNN object
             apply_to (list): list of weights to apply learning rule, e.g. 'w_rec' or 'w_in'
             online (bool): whether learning rule is online (update every step) or offline (update at end of trial)
+            weight_transpot (bool): if True, updare `w_m` every time `w_out` is updated
             
         Variables used to keep track of derivatives:
             p: eligibility trace for the recurrent weights

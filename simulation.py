@@ -66,7 +66,7 @@ class Simulation():
             fig = plt.figure(figsize=(6,5))
             assert 'pos' in probe_types, "In order to plot position, must include 'pos' in probe_types"
         
-        for count,idx in enumerate(idxs):
+        for count,idx in tqdm(enumerate(idxs)):
             
             """ Run a single trial """
             self.run_trial(tasks[idx],learn_alg=learn_alg,probe_types=probe_types,train=True)
@@ -93,6 +93,8 @@ class Simulation():
         """
         
         assert self.rnn.n_in == task.x_in.shape[1], 'Task non temporal input must match RNN input dimensions'
+        
+        assert task.y_target.shape == self.rnn.pos.shape, 'task.y_target must have dimensions '.format(self.rnn.pos.shape)
         
         if train and not learn_alg:
             raise AssertionError('If training, need to specify learning algorithm')

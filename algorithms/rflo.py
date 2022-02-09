@@ -37,7 +37,7 @@ class RFLO(LearningAlgorithm):
     (see https://github.com/murray-lab/rflo-learning for more details)
     """
     
-    def __init__(self, rnn: RNN, apply_to: List[str]=['w_rec'], online: bool = True) -> None:
+    def __init__(self, rnn: RNN, apply_to: List[str]=['w_rec'], online: bool = True, weight_transport: bool = True) -> None:
         
         """
         Initialize learning rule and set which weights to apply to
@@ -84,6 +84,7 @@ class RFLO(LearningAlgorithm):
         
         self.apply_to = apply_to
         self.online = online
+        self.weight_transport = weight_transport
         
         
         # TO DO: log error function
@@ -137,6 +138,7 @@ class RFLO(LearningAlgorithm):
             #self.p_fb += np.outer(df(rnn.u), rnn.y_prev)/rnn.tau_rec
 
 
+        """ Online Update """
         if self.online:
             
             # TODO: Check factor in derivative due to velocity transform
@@ -145,9 +147,8 @@ class RFLO(LearningAlgorithm):
             #    dw_rec *= rnn.dt_vel/rnn.tau_vel
             #    dw_in *= rnn.dt_vel/rnn.tau_vel
             
-            if 'w_out' in self.apply_to:
-                self.dw_out = rnn.eta_out/t_max*np.outer(rnn.err, rnn.h)
-                rnn.w_out = rnn.w_out + self.dw_out
+            
+                    
             if 'w_rec' in self.apply_to: 
                 self.dw_rec = rnn.eta_rec * np.outer(np.dot(rnn.w_m, rnn.err),np.ones(rnn.n_rec)) * self.p/t_max
                 rnn.w_rec = rnn.w_rec + self.dw_rec
@@ -157,11 +158,21 @@ class RFLO(LearningAlgorithm):
             if 'w_fb' in self.apply_to:
                 self.dw_fb = rnn.eta_fb * np.outer(np.dot(rnn.w_m, rnn.err),np.ones(rnn.n_out)) * self.p_fb/t_max
                 rnn.w_fb = rnn.w_fb + self.dw_fb
+                
+            # Note that w_out is updated at the end, so that w_m is updated _after_ all the other weights
+            if 'w_out' in self.apply_to:
+                self.dw_out = rnn.eta_out*np.outer(rnn.err, rnn.h)/t_max
+                rnn.w_out = rnn.w_out + self.dw_out
+                
+                # update w_m as well
+                if self.weight_transport:
+                    rnn.w_m = np.copy(rnn.w_out.T)
         
+        """ Offline Update """
         # if not online, accumulate weight updates
         if not self.online:
             if 'w_out' in self.apply_to:
-                self.dw_out += rnn.eta_out/t_max*np.outer(rnn.err, rnn.h)
+                self.dw_out += rnn.eta_out*np.outer(rnn.err, rnn.h)/t_max
             if 'w_rec' in self.apply_to: 
                 self.dw_rec += rnn.eta_rec * np.outer(np.dot(rnn.w_m, rnn.err),np.ones(rnn.n_rec)) * self.p/t_max
             if 'w_in' in self.apply_to:
@@ -171,18 +182,46 @@ class RFLO(LearningAlgorithm):
                 
         # if not online, add accumulated weight updates at the final step
         if not self.online and index == task.trial_duration-1:
-            if 'w_out' in self.apply_to:
-                rnn.w_out = rnn.w_out + self.dw_out
+
+                    
             if 'w_rec' in self.apply_to: 
                 rnn.w_rec = rnn.w_rec + self.dw_rec
             if 'w_in' in self.apply_to:
                 rnn.w_in = rnn.w_in + self.dw_in
             if 'w_fb' in self.apply_to:
                 rnn.w_fb = rnn.w_fb + self.dw_fb
+                
+            # Note that w_out is updated at the end, so that w_m is updated _after_ all the other weights
+            if 'w_out' in self.apply_to:
+                rnn.w_out = rnn.w_out + self.dw_out
+                
+                # update w_m as well
+                if self.weight_transport:
+                    rnn.w_m = np.copy(rnn.w_out.T)
+                    
+            self.reset_learning_vars() # important for offline learning
+
 
     # TODO: define this function
     def reset_learning_vars(self):
         
         self.p = np.zeros((self.rnn.n_rec, self.rnn.n_rec)) # TODO: Check
+        self.q = np.zeros((self.rnn.n_rec, self.rnn.n_in))
+        self.p_fb = np.zeros((self.rnn.n_rec, self.rnn.n_out))
+        
+        self.dw_in = np.zeros((self.rnn.n_rec, self.rnn.n_in))
+        self.dw_rec = np.zeros((self.rnn.n_rec, self.rnn.n_rec))
+        self.dw_out = np.zeros((self.rnn.n_out, self.rnn.n_rec))
+        self.dw_fb = np.zeros((self.rnn.n_rec, self.rnn.n_out))
+        
+        
+        
+    def print_params(self) -> None:
+        
+        """ Print Hyperparameters """
+        for k in ['apply_to', 'online', 'weight_transport']:
+                print(k,': ',vars(self)[k])
+                
+
             
             

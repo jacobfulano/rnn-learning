@@ -36,7 +36,7 @@ class BPTT(LearningAlgorithm):
     (see https://github.com/murray-lab/rflo-learning for more details)
     """
     
-    def __init__(self, rnn: RNN, apply_to: List[str]=['w_rec'], online: bool = True) -> None:
+    def __init__(self, rnn: RNN, apply_to: List[str]=['w_rec'], online: bool = False) -> None:
         
         """
         Initialize learning rule and set which weights to apply to
@@ -47,10 +47,13 @@ class BPTT(LearningAlgorithm):
             online (bool): whether learning rule is online (update every step) or offline (update at end of trial)
             
         """
+        print('>> TODO: Learning rule for w_fb not currently implemented for BPTT')
         
-        # Initialize learning variables
+        
         self.rnn = rnn
         
+        # Initialize learning variables - note that these need to be reset at the end of each
+        # trial with `reset_learning_vars()`
         self.dw_in = np.zeros((self.rnn.n_rec, self.rnn.n_in))
         self.dw_rec = np.zeros((self.rnn.n_rec, self.rnn.n_rec))
         self.dw_out = np.zeros((self.rnn.n_out, self.rnn.n_rec))
@@ -59,8 +62,12 @@ class BPTT(LearningAlgorithm):
         # TODO check that weight flags match weights in rnn
         assert apply_to != [], 'Must specify which weights to apply learning rule to with "apply_to"'
         
+        assert not online, 'BPTT can only be implemented offline (i.e. updates occur at the end of the trials)'
+        
         for a in apply_to:
             assert a in ['w_in','w_rec','w_out','w_fb'], "specified weights must be selected from ['w_in','w_rec','w_out','w_fb']"
+            
+        assert 'w_fb' not in apply_to, 'Learning rule for w_fb not currently implemented for BPTT'
             
         if 'w_in' in apply_to:
             assert rnn.eta_in, "eta_in must be specified if learning is occurring in w_in"
@@ -76,7 +83,7 @@ class BPTT(LearningAlgorithm):
         self.apply_to = apply_to
         self.online = online
         
-        # Keep track of error, u, x_in and h across all timesteps
+        # Keep track of error, u, x_in and h across all timesteps in a trial
         self.err_history = [] #should eventually be size np.zeros((t_max, self.rnn.n_out))  
         self.u_history = []
         self.x_in_history = []
@@ -133,8 +140,8 @@ class BPTT(LearningAlgorithm):
             self.u_history = np.asarray(self.u_history).squeeze()
             
             z = np.zeros((t_max, rnn.n_rec))
-            #z[-1] = np.dot((rnn.w_out).T, self.err_history[-1])
-            z[-1] = np.dot(rnn.w_m, self.err_history[-1])
+            z[-1] = np.dot((rnn.w_out).T, self.err_history[-1])
+            #z[-1] = np.dot(rnn.w_m, self.err_history[-1])
             
             # Loop backwards through timesteps
             for tt in range(t_max-1, 0, -1):
@@ -175,5 +182,19 @@ class BPTT(LearningAlgorithm):
         self.u_history = []
         self.x_in_history = []
         self.h_history = []
+        
+        self.dw_in = np.zeros((self.rnn.n_rec, self.rnn.n_in))
+        self.dw_rec = np.zeros((self.rnn.n_rec, self.rnn.n_rec))
+        self.dw_out = np.zeros((self.rnn.n_out, self.rnn.n_rec))
+        self.dw_fb = np.zeros((self.rnn.n_rec, self.rnn.n_out))
+        
+        
+        
+        
+    def print_params(self) -> None:
+        
+        """ Print Hyperparameters """
+        for k in ['apply_to', 'online']:
+                print(k,': ',vars(self)[k])
             
             

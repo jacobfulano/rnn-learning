@@ -31,6 +31,7 @@ class REINFORCE(LearningAlgorithm):
     
     This is a reinforcement learning (RL) rule based on the paper "Biologically plausible learning in 
     recurrent neural networks reproduces neural dynamics observed during cognitive tasks" (Miconi 2017)
+    and "Local online learning in recurrent networks with random feedback" (Murray 2019)
     
     Args:
         rnn (RNN): RNN object
@@ -65,6 +66,8 @@ class REINFORCE(LearningAlgorithm):
         self.all_tasks = [] # keeps track of unique tasks (when training with multiple tasks)
         self.task_idx = None
         
+        self.bonus = 0
+        
         assert apply_to != [], 'Must specify which weights to apply learning rule to with "apply_to"'
         
         # check that weight flags match weights in rnn
@@ -72,13 +75,16 @@ class REINFORCE(LearningAlgorithm):
             assert a in ['w_in','w_rec','w_out','w_fb'], "specified weights must be selected from ['w_in','w_rec','w_out','w_fb']"
             
         # TO DO: incorporate for w_in, w_out, w_fb
-        #if 'w_in' in apply_to:
+        if 'w_in' in apply_to:
+            raise Exception("REINFORCE does not currently work for w_in")
         #    assert rnn.eta_in, "eta_in must be specified if learning is occurring in w_in"
         if 'w_rec' in apply_to:
             assert rnn.eta_rec, "eta_rec must be specified if learning is occurring in w_rec"
-        #if 'w_out' in apply_to:
+        if 'w_out' in apply_to:
+            raise Exception("REINFORCE does not currently work for w_out")
         #    assert rnn.eta_out, "eta_out must be specified if learning is occurring in w_out"
-        #if 'w_fb' in apply_to:
+        if 'w_fb' in apply_to:
+            raise Exception("REINFORCE does not currently work for w_fb")
         #    assert rnn.eta_fb, "eta_fb must be specified if learning is occurring in w_fb"
                 
         self.apply_to = apply_to
@@ -96,7 +102,7 @@ class REINFORCE(LearningAlgorithm):
             index (int): trial step
             task (Task): task object that specifies targets, trial duration, etc.
         
-        Variables use to keep track of derivatives
+        Variables used to keep track of derivatives
             dw_rec: change in the recurrent weights
             
         TODO: Implement for
@@ -106,12 +112,10 @@ class REINFORCE(LearningAlgorithm):
         """
         
         """ Keep separate running average for each task """
-        if index == 0: # this only needs to be calculated at the beginning of the trial
-            self.task_idx = self._track_tasks(task)
+        #if index == 0: # this only needs to be calculated at the beginning of the trial
+        self.task_idx = self._track_tasks(task)
         
         task_idx = self.task_idx
-
-        
                     
         
         # pointer for convenience
@@ -120,16 +124,24 @@ class REINFORCE(LearningAlgorithm):
 
             
         """ Reward based on final target position """
-        xi = self.sig_xi * rnn.rng.randn(rnn.n_rec,1)
+        #xi = self.sig_xi * rnn.rng.randn(rnn.n_rec,1) # note rand, and vector of noise values
+        xi = self.sig_xi * rnn.rng.randn(1) * np.ones((rnn.n_rec,1)) # only one noise value
                 
         self.p = (1-1/rnn.tau_rec)*self.p
         self.p += np.outer(xi*df(rnn.u), rnn.h_prev)/rnn.tau_rec
 
-            
+        # BONUS
+#         if index > task.trial_duration-np.round(task.trial_duration/4): # end of trial
+#             #norm_av += np.linalg.norm(pos[tt+1]-y_)**2
+#             if  np.linalg.norm(rnn.pos-task.y_target)**2 < 0.5: #0.35: # doesn't happen often?
+#                 #bonus = bonus_amount
+#                 self.bonus += 1
+                
+                
+                    
         if self.online:
             
-            
-            rnn.r_current = -(np.linalg.norm(task.y_target-rnn.pos))**2
+            rnn.r_current = -(np.linalg.norm(task.y_target-rnn.pos))**2 + self.bonus
             
             dw_rec = rnn.eta_rec * (rnn.r_current - self.r_av[task_idx])*self.p/t_max
             
@@ -141,11 +153,22 @@ class REINFORCE(LearningAlgorithm):
         """ At the end of the trial """
         if not self.online and index == task.trial_duration-1:
             
-            print(task.y_target)
+            #print(task_idx)
+            #print(task.y_target)
+            #print('first')
             
-            rnn.r_current = -(np.linalg.norm(task.y_target - rnn.pos))**2
+            rnn.r_current = -(np.linalg.norm(task.y_target - rnn.pos))**2 + self.bonus
+            
+            #print('y_target',task.y_target)
+            #print('rnn.pos',rnn.pos)
+            #print('task.y_target - rnn.pos',task.y_target - rnn.pos)
+            #print('norm',-np.linalg.norm(task.y_target - rnn.pos)**2)
             
             dw_rec = rnn.eta_rec * (rnn.r_current - self.r_av[task_idx])*self.p
+            
+            #print('rnn.r_current - self.r_av[task_idx] = ',rnn.r_current - self.r_av[task_idx])
+            #print('dw_rec',dw_rec)
+            #print('sum dw_rec:',np.sum(dw_rec))
     
             if 'w_rec' in self.apply_to: 
                 rnn.w_rec = rnn.w_rec + dw_rec
@@ -153,11 +176,17 @@ class REINFORCE(LearningAlgorithm):
         """ At end of trial, update average reward"""
         # TODO: This needs to be implemented for multiple targets
         if index == task.trial_duration-1:
+            #print(task_idx)
             
+            #self.r_av_prev[task_idx] = np.copy(self.r_av[task_idx]) # this leads to an array inside a list?
+            self.r_av_prev[task_idx] = self.r_av[task_idx]
             self.r_av[task_idx] = self.r_av_prev[task_idx] + (1/self.tau_reward) * (rnn.r_current-self.r_av_prev[task_idx])
-            self.r_av_prev[task_idx] = np.copy(self.r_av[task_idx])
-            
+            #print(self.r_av)
+            #print('r_av_prev',self.r_av_prev)
             #print('r_av',self.r_av)
+            #print('task idx: ',task_idx)
+            #print('r_av',self.r_av)
+            #print()
             
             
 
@@ -186,7 +215,7 @@ class REINFORCE(LearningAlgorithm):
             self.r_av_prev.append(0)
             
             task_idx = len(self.all_tasks)-1
-
+            
                     
         return task_idx
     

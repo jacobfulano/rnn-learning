@@ -85,6 +85,12 @@ class RNNparams():
     dt_vel: Optional[float] = None
         
     rng: np.random.RandomState() = np.random.RandomState(17)
+        
+    def print_params(self) -> None:
+        
+        """ Method to print hyperparameters """
+        for k,v in dataclasses.asdict(self).items():
+            print(k+':',v)
 
 
 
@@ -175,7 +181,7 @@ class RNN():
             assert w_rec.shape == (self.n_rec,self.n_rec), 'Dimensions must be (n_rec,n_rec)'
             self.w_rec = w_rec # = w_init['w_rec'] #1*np.random.randn(n_rec, n_rec)/n_rec**0.5 # --> changed from 1.5
         if w_out is not None:
-            assert w_out.shape == (self.n_rec,self.n_out), 'Dimensions must be (n_rec,n_out)'
+            assert w_out.shape == (self.n_out,self.n_rec), 'Dimensions must be (n_out,n_rec)'
             self.w_out = w_out # = w_init['w_out'] #1*(2*np.random.rand(n_out, n_rec) - 1)/n_rec**0.5 # --> should be on same scale as target
         if w_m is not None:
             assert w_m.shape == self.w_out.T.shape, 'Dimensions must be (n_out,n_rec)'

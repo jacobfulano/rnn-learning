@@ -105,7 +105,7 @@ class Simulation():
         self.session_probes = session_probes
         
         if plot:
-            plot_loss(loss=loss)
+            plot_loss(loss=loss,label=' '.join([alg.name for alg in learn_alg]))
         
     
     def run_trial(self, task: Task, 

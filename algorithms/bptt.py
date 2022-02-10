@@ -36,7 +36,7 @@ class BPTT(LearningAlgorithm):
     (see https://github.com/murray-lab/rflo-learning for more details)
     """
     
-    def __init__(self, rnn: RNN, apply_to: List[str]=['w_rec'], online: bool = False) -> None:
+    def __init__(self, rnn: RNN, apply_to: List[str]=['w_rec'], online: bool = False, weight_transport: bool = True) -> None:
         
         """
         Initialize learning rule and set which weights to apply to
@@ -45,6 +45,7 @@ class BPTT(LearningAlgorithm):
             rnn (RNN): RNN object
             apply_to (list): list of weights to apply learning rule, e.g. 'w_rec' or 'w_in'
             online (bool): whether learning rule is online (update every step) or offline (update at end of trial)
+            weight_transpot (bool): if True, updare `w_m` every time `w_out` is updated. Although not normally used for BPTT, it allows for separating the effects of the readout weight transpose from the nonlocal rollout/update in time
             
         """
         print('>> TODO: Learning rule for w_fb not currently implemented for BPTT')
@@ -80,9 +81,11 @@ class BPTT(LearningAlgorithm):
             assert rnn.eta_fb, "eta_fb must be specified if learning is occurring in w_fb"
             
         
-        
+        self.name = 'BPTT'
         self.apply_to = apply_to
         self.online = online
+        self.weight_transport = weight_transport
+        
         
         # Keep track of error, u, x_in and h across all timesteps in a trial
         self.err_history = [] #should eventually be size np.zeros((t_max, self.rnn.n_out))  
@@ -142,8 +145,8 @@ class BPTT(LearningAlgorithm):
             self.u_history = np.asarray(self.u_history).squeeze()
             
             z = np.zeros((t_max, rnn.n_rec))
-            z[-1] = np.dot((rnn.w_out).T, self.err_history[-1])
-            #z[-1] = np.dot(rnn.w_m, self.err_history[-1])
+            #z[-1] = np.dot((rnn.w_out).T, self.err_history[-1])
+            z[-1] = np.dot(rnn.w_m, self.err_history[-1]) # note w_m here
             
             # Loop backwards through timesteps
             for tt in range(t_max-1, 0, -1):
@@ -151,16 +154,20 @@ class BPTT(LearningAlgorithm):
                 z[tt-1] += np.dot(rnn.w_m, self.err_history[tt]) # what are dimensions of rnn.err? It does not keep a history over timesteps!!
                 z[tt-1] += np.dot(z[tt]*df(self.u_history[tt]), rnn.w_rec)/rnn.tau_rec
 
-                # Updates for the weights:
-                if 'w_out' in self.apply_to:
-                    self.dw_out += rnn.eta_out*np.outer(self.err_history[tt], self.h_history[tt])/t_max
-                
+                # Updates for the weights at each timestep backwards:
                 if 'w_rec' in self.apply_to:
                     self.dw_rec += rnn.eta_rec/(t_max*rnn.tau_rec)*np.outer(z[tt]*df(self.u_history[tt]),
                                                             self.h_history[tt-1])
                 if 'w_in' in self.apply_to:
                     self.dw_in += rnn.eta_in/(t_max*rnn.tau_rec)*np.outer(z[tt]*df(self.u_history[tt]),
                                                            self.x_in_history[tt])
+                    
+                if 'w_out' in self.apply_to:
+                    self.dw_out += rnn.eta_out*np.outer(self.err_history[tt], self.h_history[tt])/t_max
+                    
+                     # update w_m as well (this is the standard BPTT algorithm)
+                    if self.weight_transport:
+                        rnn.w_m = np.copy(rnn.w_out.T)
                 
                 # TO DO: ADD RULE FOR W_FB
                 

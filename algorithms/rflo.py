@@ -82,7 +82,7 @@ class RFLO(LearningAlgorithm):
             assert rnn.eta_fb, "eta_fb must be specified if learning is occurring in w_fb"
         
         
-        
+        self.name='RFLO'
         self.apply_to = apply_to
         self.online = online
         self.weight_transport = weight_transport

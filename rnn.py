@@ -220,7 +220,9 @@ class RNN():
             self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) 
 
         # update step
-        self.h = self.h + (-self.h + f(self.u) + self.sig_rec*self.rng.randn(self.n_rec,1))/self.tau_rec
+        self.xi = self.sig_rec*self.rng.randn(self.n_rec,1)
+        self.h = self.h + (-self.h + f(self.u) + self.xi)/self.tau_rec
+        #self.h = self.h + (-self.h + f(self.u) + self.sig_rec*self.rng.randn(self.n_rec,1))/self.tau_rec
         
         self.x_in = x_in
        

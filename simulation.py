@@ -74,17 +74,35 @@ class Simulation():
         probe_types_all = probe_types
         
         if plot:
+            """ Plot Loss or Reward """
             fig1 = plt.figure(figsize=(6,5))
             if 'pos' not in probe_types:
                 probe_types_all = probe_types_all + ['pos'] # append
-            
-            if 'loss' not in probe_types:
-                probe_types_all = probe_types_all + ['loss'] # append
                 
-            loss = []
-
+            for alg in learn_alg:
+                
+                if alg.name == 'REINFORCE':
+                    if 'reward' not in probe_types:
+                        probe_types_all = probe_types_all + ['reward'] # append
+                    
+                    reward = []
+                    
+                if alg.name == 'RFLO':
+                    if 'loss' not in probe_types:
+                        probe_types_all = probe_types_all + ['loss'] # append
+                    
+                    loss = []
+                    
+                if alg.name == 'BPTT':
+                    if 'loss' not in probe_types:
+                        probe_types_all = probe_types_all + ['loss'] # append
+                
+                    loss = []
+            
             assert 'pos' in probe_types_all, "In order to plot position, must include 'pos' in probe_types"
-            assert 'loss' in probe_types_all, "In order to plot position, must include 'loss' in probe_types"
+            #assert 'loss' in probe_types_all, "In order to plot loss, must include 'loss' in probe_types"
+
+            
         
         
         
@@ -94,7 +112,10 @@ class Simulation():
             self.run_trial(tasks[idx],learn_alg=learn_alg,probe_types=probe_types_all,train=True)
             
             if plot:
-                loss.append(np.mean(self.probes['loss']))
+                if 'loss' in probe_types_all:
+                    loss.append(np.mean(self.probes['loss']))
+                if 'reward' in probe_types_all:
+                    reward.append(np.mean(self.probes['reward']))
             if plot and count % plot_freq == 0:
                 fig1 = plot_position(fig=fig1, pos=self.probes['pos'], tasks = tasks, count=count, n_trials=n_trials, plot_freq=plot_freq)
                 
@@ -105,7 +126,10 @@ class Simulation():
         self.session_probes = session_probes
         
         if plot:
-            plot_loss(loss=loss,label=' '.join([alg.name for alg in learn_alg]))
+            if 'loss' in probe_types_all:
+                plot_loss(loss=loss,yscale='log',label=' '.join([alg.name for alg in learn_alg]))
+            if 'reward' in probe_types_all:
+                plot_loss(loss=reward,yscale='linear',title='Reward',ylabel='Reward',label=' '.join([alg.name for alg in learn_alg]))
         
     
     def run_trial(self, task: Task, 

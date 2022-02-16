@@ -141,6 +141,8 @@ class REINFORCE(LearningAlgorithm):
 #                 self.bonus += 1
                 
         rnn.r_current = -(np.linalg.norm(task.y_target-rnn.pos))**2 + self.bonus  
+        # for plotting purposes, keep track of reward
+        rnn.reward = np.copy(rnn.r_current)
                     
         if self.online:
             

@@ -23,14 +23,14 @@ sys.path.append("../..")
 
 from task import Task
 
-def plot_loss(loss,fig=None,title='Loss',label='Loss',yscale='log'):
+def plot_loss(loss,fig=None,title='Loss',label='Loss',ylabel='Loss',yscale='log'):
     
     if not fig:
         fig = plt.figure(figsize=(6,3))
         
     plt.plot(loss,label=label)
     plt.xlabel('Trials')
-    plt.ylabel('Loss')
+    plt.ylabel(ylabel)
     plt.yscale(yscale)
     plt.title(title)
     plt.legend()

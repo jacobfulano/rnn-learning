@@ -43,31 +43,25 @@ class REINFORCE(LearningAlgorithm):
     Variables used to keep track of derivatives:
         p: eligibility trace for the recurrent weights
             
-    TODO: Currently only implemented for w_rec. Need to implement for w_in, w_fb and w_out
-    
-    TODO: SOMETHING IS CURRENTLY WRONG WITH MULTI-TASK TRAINING
+    TODO: Currently only implemented for w_rec. Need to implement for w_in, w_fb and w_out. Also could implement sporadic reward    
     """
     
     def __init__(self, rnn: RNN, tau_reward: float, apply_to: List[str]=['w_rec'], online: bool = True) -> None:
-        # sig_xi: float, 
         
-        # variable necessary for this RL algorithm
-        #self.sig_xi = sig_xi # noise scale
-        self.tau_reward = tau_reward # timescale of reward
+        
         
         # Initialize learning variables
         self.rnn = rnn
         self.p = np.zeros((self.rnn.n_rec, self.rnn.n_rec))
         self.dw_rec = np.zeros((self.rnn.n_rec, self.rnn.n_rec))
         
+        # variables necessary for this RL algorithm
+        self.tau_reward = tau_reward # timescale of reward
         self.r_av = [] # should be a vector dependent on the task
         self.r_av_prev = [] # should be a vector dependent on the task
         self.rnn.r_current = 0
-        
         self.all_tasks = [] # keeps track of unique tasks (when training with multiple tasks)
         self.task_idx = None
-        
-        self.bonus = 0
         
         assert apply_to != [], 'Must specify which weights to apply learning rule to with "apply_to"'
         
@@ -94,6 +88,15 @@ class REINFORCE(LearningAlgorithm):
                 
         assert apply_to[0] == 'w_rec', 'REINFORCE only currently implemented for w_rec' 
         
+        # TO DO:
+        # * bonus
+        # * learning rule for w_out
+        # * learning rule for w_fb
+        # * learning rule for w_in
+        # * sporadic reward at end of trial as alternate learning rule
+        
+        # self.bonus = 0
+        
     
     def update_learning_vars(self, index: int, task: Task):
         
@@ -114,8 +117,8 @@ class REINFORCE(LearningAlgorithm):
         """
         
         """ Keep separate running average for each task """
-        #if index == 0: # this only needs to be calculated at the beginning of the trial
-        self.task_idx = self._track_tasks(task)
+        if index == 0: # this only needs to be calculated at the beginning of the trial
+            self.task_idx = self._track_tasks(task)
         
         task_idx = self.task_idx
                     
@@ -125,9 +128,7 @@ class REINFORCE(LearningAlgorithm):
         t_max = task.trial_duration
 
             
-        """ Reward based on final target position """
-        #xi = self.sig_xi * rnn.rng.randn(rnn.n_rec,1) # note rand, and vector of noise values
-        #xi = self.sig_xi * rnn.rng.randn(1) * np.ones((rnn.n_rec,1)) # only one noise value
+        
         
         """ update must include noise rnn.xi inject to network recurrent layer """
         self.p = (1-1/rnn.tau_rec)*self.p
@@ -139,10 +140,11 @@ class REINFORCE(LearningAlgorithm):
 #             if  np.linalg.norm(rnn.pos-task.y_target)**2 < 0.5: #0.35: # doesn't happen often?
 #                 #bonus = bonus_amount
 #                 self.bonus += 1
-                
-        rnn.r_current = -(np.linalg.norm(task.y_target-rnn.pos))**2 + self.bonus  
-        # for plotting purposes, keep track of reward
-        rnn.reward = np.copy(rnn.r_current)
+        
+        """ Reward based on final target position """
+        rnn.r_current = -(np.linalg.norm(task.y_target-rnn.pos))**2 # + self.bonus  
+       
+        rnn.reward = np.copy(rnn.r_current)  # for plotting purposes, keep track of reward
                     
         if self.online:
             
@@ -162,41 +164,17 @@ class REINFORCE(LearningAlgorithm):
         """ At the end of the trial """
         if not self.online and index == task.trial_duration-1:
             
-            #print(task_idx)
-            #print(task.y_target)
-            #print('first')
-            
-            #rnn.r_current = -(np.linalg.norm(task.y_target - rnn.pos))**2 + self.bonus
-            
-            #print('y_target',task.y_target)
-            #print('rnn.pos',rnn.pos)
-            #print('task.y_target - rnn.pos',task.y_target - rnn.pos)
-            #print('norm',-np.linalg.norm(task.y_target - rnn.pos)**2)
-            
             """ could also have sporadic reward at the end of the trial """
             #self.dw_rec = rnn.eta_rec * (rnn.r_current - self.r_av[task_idx])*self.p
-            
-            #print('rnn.r_current - self.r_av[task_idx] = ',rnn.r_current - self.r_av[task_idx])
-            #print('dw_rec',dw_rec)
-            #print('sum dw_rec:',np.sum(dw_rec))
     
             if 'w_rec' in self.apply_to: 
                 rnn.w_rec = rnn.w_rec + self.dw_rec
         
         """ At end of trial, update average reward"""
-        # TODO: This needs to be implemented for multiple targets
         if index == task.trial_duration-1:
-            #print(task_idx)
             
-            #self.r_av_prev[task_idx] = np.copy(self.r_av[task_idx]) # this leads to an array inside a list?
             self.r_av_prev[task_idx] = self.r_av[task_idx]
             self.r_av[task_idx] = self.r_av_prev[task_idx] + (1/self.tau_reward) * (rnn.r_current-self.r_av_prev[task_idx])
-            #print(self.r_av)
-            #print('r_av_prev',self.r_av_prev)
-            #print('r_av',self.r_av)
-            #print('task idx: ',task_idx)
-            #print('r_av',self.r_av)
-            #print()
             
             self.reset_learning_vars() # important for offline learning
             
@@ -215,7 +193,9 @@ class REINFORCE(LearningAlgorithm):
     
     def _track_tasks(self,task):
             
-        """ Keep track of which task is being used for training """
+        """ Keep track of which task is being used for training
+        Note that this is specific for REINFORCE algorithm
+        """
         
         task_bool = [np.array_equal(ts.y_target,task.y_target) for ts in self.all_tasks]
 
@@ -229,7 +209,6 @@ class REINFORCE(LearningAlgorithm):
             
             task_idx = len(self.all_tasks)-1
             
-                    
         return task_idx
     
     

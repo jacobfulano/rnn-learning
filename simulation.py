@@ -44,7 +44,7 @@ class Simulation():
         self.rnn = rnn
         
         
-    def run_session(self, n_trials: int, tasks: List[Task], learn_alg: List[str], probe_types: List[str], plot: bool = True, plot_freq: int = 10) -> None:
+    def run_session(self, n_trials: int, tasks: List[Task], learn_alg: List[str], probe_types: List[str], plot: bool = True, plot_freq: int = 10, train: bool = True) -> None:
         
         """ Run a full training session
         
@@ -98,6 +98,12 @@ class Simulation():
                         probe_types_all = probe_types_all + ['loss'] # append
                 
                     loss = []
+                    
+                if alg.name == 'TrackVars': # this could be loss or reward # << CLEAN UP
+                    if 'loss' not in probe_types:
+                        probe_types_all = probe_types_all + ['loss'] # append
+                
+                    loss = []
             
             assert 'pos' in probe_types_all, "In order to plot position, must include 'pos' in probe_types"
             #assert 'loss' in probe_types_all, "In order to plot loss, must include 'loss' in probe_types"
@@ -109,7 +115,7 @@ class Simulation():
         for count,idx in tqdm(enumerate(idxs)):
             
             """ Run a single trial """
-            self.run_trial(tasks[idx],learn_alg=learn_alg,probe_types=probe_types_all,train=True)
+            self.run_trial(tasks[idx],learn_alg=learn_alg,probe_types=probe_types_all,train=train)
             
             if plot:
                 if 'loss' in probe_types_all:

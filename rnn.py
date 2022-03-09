@@ -72,6 +72,11 @@ class RNNparams():
     eta_in: Optional[float] = None
     eta_rec: Optional[float] = None
     eta_out: Optional[float] = None
+        
+    g_in: Optional[float] = 2.0
+    g_rec: Optional[float] = 1.5
+    g_out: Optional[float] = 2.0
+    g_fb: Optional[float] = 2.0
     
     """ driving feedback parameters """
     driving_feedback: bool = False
@@ -109,7 +114,7 @@ class RNN():
         init (boolean): if true, initialize weights. default=True
     """
     
-    def __init__(self, params: RNNparams,init=True) -> None:
+    def __init__(self, params: RNNparams,init=True, f=f, df=df) -> None:
         for key, value in dataclasses.asdict(params).items():
             setattr(self, key, value)
         
@@ -123,6 +128,9 @@ class RNN():
         self.y_out = np.zeros((self.n_out,1))
         self.pos = np.zeros((self.n_out,1))
         self.u = np.zeros((self.n_rec,1))
+        
+        self.f = f
+        self.df = df
         
         if self.velocity_transform:
             self.vel = np.zeros((self.n_out,1))
@@ -138,7 +146,7 @@ class RNN():
         # TO DO: I don't want this to be here, but think it is necessary for probes
         self.r = None
         self.r_current = None
-        self.err = np.zeros((self.n_out,1))
+        self.err = np.zeros((self.n_out,1)) # does this have to be here?
         
         
          
@@ -146,14 +154,14 @@ class RNN():
         
         """ Initialize all weights with random number generator """
     
-        self.w_in = 2*(self.rng.rand(self.n_rec, self.n_in) - 1) # changed from 0.1
-        self.w_rec = 1.5*self.rng.randn(self.n_rec, self.n_rec)/self.n_rec**0.5 # --> 1 changed from 1.5 # why randn instead of rand?
-        self.w_out = 2*(2*self.rng.rand(self.n_out, self.n_rec) - 1)/self.n_rec**0.5 
+        self.w_in = self.g_in*(self.rng.rand(self.n_rec, self.n_in) - 1) # changed from 0.1
+        self.w_rec = self.g_rec*self.rng.randn(self.n_rec, self.n_rec)/self.n_rec**0.5 # --> 1 changed from 1.5 # why randn instead of rand?
+        self.w_out = self.g_out*(2*self.rng.rand(self.n_out, self.n_rec) - 1)/self.n_rec**0.5 
         
         self.w_m = np.copy(self.w_out).T # CHANGE THIS
         
         if self.driving_feedback:
-            self.w_fb = 2*self.rng.randn(self.n_rec,self.n_out)/self.n_rec**0.5
+            self.w_fb = self.g_fb*self.rng.randn(self.n_rec,self.n_out)/self.n_rec**0.5
 
     def set_weights(self, 
                     w_in: Optional[np.array]=None, 
@@ -221,8 +229,8 @@ class RNN():
 
         # update step
         self.xi = self.sig_rec*self.rng.randn(self.n_rec,1)
-        self.h = self.h + (-self.h + f(self.u) + self.xi)/self.tau_rec
-        #self.h = self.h + (-self.h + f(self.u) + self.sig_rec*self.rng.randn(self.n_rec,1))/self.tau_rec
+        self.h = self.h + (-self.h + self.f(self.u) + self.xi)/self.tau_rec
+        #self.h = self.h + (-self.h + self.f(self.u) + self.sig_rec*self.rng.randn(self.n_rec,1))/self.tau_rec
         
         self.x_in = x_in
        

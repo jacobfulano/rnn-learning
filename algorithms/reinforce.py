@@ -132,7 +132,7 @@ class REINFORCE(LearningAlgorithm):
         
         """ update must include noise rnn.xi inject to network recurrent layer """
         self.p = (1-1/rnn.tau_rec)*self.p
-        self.p += np.outer(rnn.xi*df(rnn.u), rnn.h_prev)/rnn.tau_rec
+        self.p += np.outer(rnn.xi*rnn.df(rnn.u), rnn.h_prev)/rnn.tau_rec
 
         # BONUS
 #         if index > task.trial_duration-np.round(task.trial_duration/4): # end of trial
@@ -142,7 +142,11 @@ class REINFORCE(LearningAlgorithm):
 #                 self.bonus += 1
         
         """ Reward based on final target position """
-        rnn.r_current = -(np.linalg.norm(task.y_target-rnn.pos))**2 # + self.bonus  
+        rnn.err = task.y_target-rnn.pos
+        rnn.r_current = -(np.linalg.norm(rnn.err))**2 # + self.bonus  
+        
+        # alternative: scaled error based on time left in trial
+        # rnn.err = (1/(task.trial_duration-index)) * (task.y_target - rnn.pos)
        
         rnn.reward = np.copy(rnn.r_current)  # for plotting purposes, keep track of reward
                     

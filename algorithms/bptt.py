@@ -152,14 +152,14 @@ class BPTT(LearningAlgorithm):
             for tt in range(t_max-1, 0, -1):
                 z[tt-1] = z[tt]*(1 - 1/rnn.tau_rec)
                 z[tt-1] += np.dot(rnn.w_m, self.err_history[tt]) # what are dimensions of rnn.err? It does not keep a history over timesteps!!
-                z[tt-1] += np.dot(z[tt]*df(self.u_history[tt]), rnn.w_rec)/rnn.tau_rec
+                z[tt-1] += np.dot(z[tt]*rnn.df(self.u_history[tt]), rnn.w_rec)/rnn.tau_rec
 
                 # Updates for the weights at each timestep backwards:
                 if 'w_rec' in self.apply_to:
-                    self.dw_rec += rnn.eta_rec/(t_max*rnn.tau_rec)*np.outer(z[tt]*df(self.u_history[tt]),
+                    self.dw_rec += rnn.eta_rec/(t_max*rnn.tau_rec)*np.outer(z[tt]*rnn.df(self.u_history[tt]),
                                                             self.h_history[tt-1])
                 if 'w_in' in self.apply_to:
-                    self.dw_in += rnn.eta_in/(t_max*rnn.tau_rec)*np.outer(z[tt]*df(self.u_history[tt]),
+                    self.dw_in += rnn.eta_in/(t_max*rnn.tau_rec)*np.outer(z[tt]*rnn.df(self.u_history[tt]),
                                                            self.x_in_history[tt])
                     
                 if 'w_out' in self.apply_to:

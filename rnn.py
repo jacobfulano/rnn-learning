@@ -89,6 +89,9 @@ class RNNparams():
     tau_vel: Optional[float] = None
     dt_vel: Optional[float] = None
         
+    """ recurrent noise dimension parameters """
+    sig_rec_dim: Optional[int] = None
+        
     rng: np.random.RandomState() = np.random.RandomState(17)
         
     def print_params(self) -> None:
@@ -147,6 +150,25 @@ class RNN():
         self.r = None
         self.r_current = None
         self.err = np.zeros((self.n_out,1)) # does this have to be here?
+        
+        """ Properties of recurrent noise """
+        if self.sig_rec_dim == None:
+            self.sig_rec_dim = self.n_rec # dimension of recurrent noise
+            
+        assert self.sig_rec_dim <= self.n_rec, 'recurrent noise dimension must be less than or equal to number of recurrent units'
+        
+        # generate projection matrix for low-D noise
+        if self.sig_rec_dim <= self.n_rec:
+            """ project on to all units with matrix P """
+            P = np.zeros((self.n_rec,self.sig_rec_dim)) 
+
+            # for each row, randomly insert 1
+            for p in P:
+                ind = self.rng.choice(np.arange(self.sig_rec_dim,dtype=int),1)
+                p[ind] = 1
+                
+            self.noise_projection_matrix = P
+            
         
         
          
@@ -228,7 +250,9 @@ class RNN():
             self.u = np.dot(self.w_rec, self.h) + np.dot(self.w_in, x_in + self.sig_in*self.rng.randn(self.n_in,1)) 
 
         # update step
-        self.xi = self.sig_rec*self.rng.randn(self.n_rec,1)
+        #self.xi = self.sig_rec*self.rng.randn(self.n_rec,1)
+        self.xi = self._generate_recurrent_noise()
+        
         self.h = self.h + (-self.h + self.f(self.u) + self.xi)/self.tau_rec
         #self.h = self.h + (-self.h + self.f(self.u) + self.sig_rec*self.rng.randn(self.n_rec,1))/self.tau_rec
         
@@ -258,6 +282,39 @@ class RNN():
             
         else:
             self.pos = self.y_out
+            
+            
+            
+            
+            
+            
+    def _generate_recurrent_noise(self):
+
+        """ Generate Recurrent Noise
+
+        This function generates noise that is injected into the recurrent units.
+        Noise is sampled from a gaussian distribution, and can be low-D.
+
+
+        n_rec is the number of recurrent units, and sig_rec_dim is the dimension of noise, 
+        which must be less than or equal to number of units. 
+
+        Returns:
+        xi: vector of dimension n_rec
+        
+        Note: the noise projection matrix is constant for an RNN instantiation. This speeds up
+        computation, but also means that the same recurrent units will co-vary
+        """
+
+        v = self.rng.randn(self.sig_rec_dim,1) # noise vector vector
+
+        if self.sig_rec_dim < self.n_rec:
+            xi = self.sig_rec * self.noise_projection_matrix @ v
+
+        else:
+            xi = self.sig_rec * v
+
+        return xi
 
 
 

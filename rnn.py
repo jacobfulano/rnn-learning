@@ -92,6 +92,11 @@ class RNNparams():
     """ recurrent noise dimension parameters """
     sig_rec_dim: Optional[int] = None
         
+    """ weight mirroring parameters """
+    eta_m: Optional[float] = None
+    sig_m: Optional[float] = None
+    lam_m: Optional[float] = None
+        
     rng: np.random.RandomState() = np.random.RandomState(17)
         
     def print_params(self) -> None:

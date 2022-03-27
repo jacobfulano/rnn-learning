@@ -53,7 +53,12 @@ class REINFORCE(LearningAlgorithm):
         # Initialize learning variables
         self.rnn = rnn
         self.p = np.zeros((self.rnn.n_rec, self.rnn.n_rec))
+        self.p_fb = np.zeros((self.rnn.n_rec, self.rnn.n_out))
+        
+        #self.dw_in = np.zeros((self.rnn.n_rec, self.rnn.n_in)) # TO DO
         self.dw_rec = np.zeros((self.rnn.n_rec, self.rnn.n_rec))
+        #self.dw_out = np.zeros((self.rnn.n_out, self.rnn.n_rec)) # TO DO
+        self.dw_fb = np.zeros((self.rnn.n_rec, self.rnn.n_out))
         
         # variables necessary for this RL algorithm
         self.tau_reward = tau_reward # timescale of reward
@@ -79,14 +84,13 @@ class REINFORCE(LearningAlgorithm):
             raise Exception("REINFORCE does not currently work for w_out")
         #    assert rnn.eta_out, "eta_out must be specified if learning is occurring in w_out"
         if 'w_fb' in apply_to:
-            raise Exception("REINFORCE does not currently work for w_fb")
-        #    assert rnn.eta_fb, "eta_fb must be specified if learning is occurring in w_fb"
+            assert rnn.eta_fb, "eta_fb must be specified if learning is occurring in w_fb"
         
         self.name='REINFORCE'
         self.apply_to = apply_to
         self.online = online
                 
-        assert apply_to[0] == 'w_rec', 'REINFORCE only currently implemented for w_rec' 
+        #assert apply_to[0] == 'w_rec', 'REINFORCE only currently implemented for w_rec' 
         
         # TO DO:
         # * bonus
@@ -131,8 +135,14 @@ class REINFORCE(LearningAlgorithm):
         
         
         """ update must include noise rnn.xi inject to network recurrent layer """
-        self.p = (1-1/rnn.tau_rec)*self.p
-        self.p += np.outer(rnn.xi*rnn.df(rnn.u), rnn.h_prev)/rnn.tau_rec
+        if 'w_rec' in self.apply_to: 
+            self.p = (1-1/rnn.tau_rec)*self.p
+            self.p += np.outer(rnn.xi*rnn.df(rnn.u), rnn.h_prev)/rnn.tau_rec
+        
+        if 'w_fb' in self.apply_to:
+            self.p_fb = (1-1/rnn.tau_rec)*self.p_fb
+            self.p_fb += np.outer(rnn.xi*rnn.df(rnn.u), rnn.pos)/rnn.tau_rec
+            
 
         # BONUS
 #         if index > task.trial_duration-np.round(task.trial_duration/4): # end of trial
@@ -152,16 +162,24 @@ class REINFORCE(LearningAlgorithm):
                     
         if self.online:
             
-            self.dw_rec = rnn.eta_rec * (rnn.r_current - self.r_av[task_idx])*self.p/t_max
+            self.dw_rec = rnn.eta_rec * (rnn.r_current - self.r_av[task_idx])*self.p/t_max # should this be inside if statement?
             
             if 'w_rec' in self.apply_to: 
                 rnn.w_rec = rnn.w_rec + self.dw_rec
+                
+            if 'w_fb' in self.apply_to:
+                self.dw_fb = rnn.eta_fb * (rnn.r_current - self.r_av[task_idx]) * self.p_fb/t_max
+                rnn.w_fb = rnn.w_fb + self.dw_fb
                 
         if not self.online:
             
             """ running sum of update """
             if 'w_rec' in self.apply_to: 
-                self.dw_rec += rnn.eta_rec * (rnn.r_current - self.r_av[task_idx])*self.p/t_max
+                self.dw_rec += rnn.eta_rec * (rnn.r_current - self.r_av[task_idx]) * self.p/t_max
+                
+            if 'w_fb' in self.apply_to:
+                self.dw_fb += rnn.eta_fb * (rnn.r_current - self.r_av[task_idx]) * self.p_fb/t_max
+                
                 
         # TO DO: ADD FOR w_in, w_out and w_fb
                 
@@ -173,6 +191,9 @@ class REINFORCE(LearningAlgorithm):
     
             if 'w_rec' in self.apply_to: 
                 rnn.w_rec = rnn.w_rec + self.dw_rec
+                
+            if 'w_fb' in self.apply_to:
+                rnn.w_fb = rnn.w_fb + self.dw_fb
         
         """ At end of trial, update average reward"""
         if index == task.trial_duration-1:
@@ -187,9 +208,12 @@ class REINFORCE(LearningAlgorithm):
     def reset_learning_vars(self):
         
         """ Reset variables """
-        self.dw_rec = np.zeros((self.rnn.n_rec, self.rnn.n_rec))
-
         self.p = np.zeros((self.rnn.n_rec, self.rnn.n_rec))
+        self.p_fb = np.zeros((self.rnn.n_rec, self.rnn.n_out))
+        
+        self.dw_rec = np.zeros((self.rnn.n_rec, self.rnn.n_rec))
+        self.dw_fb = np.zeros((self.rnn.n_rec, self.rnn.n_out))
+
         self.rnn.r_av = []
         self.rnn.r_av_prev = []
         self.rnn.r_current = 0

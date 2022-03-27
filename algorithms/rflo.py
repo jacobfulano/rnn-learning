@@ -87,9 +87,7 @@ class RFLO(LearningAlgorithm):
         self.online = online
         self.weight_transport = weight_transport
         
-        
-        # TO DO: log error function
-        
+                
     
     def update_learning_vars(self, index: int, task: Task):
         

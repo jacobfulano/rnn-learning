@@ -26,6 +26,17 @@ def cos_sim(a,b):
     """ cosine similarity between vectors """
     return np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b))
 
+def return_norm_and_angle(A,B):
+    """ Calculate two measures of similarity between two matrices"""
+    
+    norm = np.linalg.norm(A-B)
+    
+    AA = A.ravel()
+    BB = B.ravel()
+    angle = np.linalg.norm(AA.T@BB)/(np.linalg.norm(AA) * np.linalg.norm(BB))
+    
+    return norm, angle
+
 
 def flow_field_data(h_list, verbose: bool = False, fit_intercept: bool = False):
     

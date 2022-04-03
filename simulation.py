@@ -99,6 +99,12 @@ class Simulation():
                 
                     loss = []
                     
+                if alg.name == 'WeightMirror':
+                    if 'loss' not in probe_types:
+                        probe_types_all = probe_types_all + ['loss'] # append
+                
+                    loss = []
+                    
                 if alg.name == 'TrackVars': # this could be loss or reward # << CLEAN UP
                     if 'loss' not in probe_types:
                         probe_types_all = probe_types_all + ['loss'] # append
@@ -126,6 +132,11 @@ class Simulation():
                 fig1 = plot_position(fig=fig1, pos=self.probes['pos'], tasks = tasks, count=count, n_trials=n_trials, plot_freq=plot_freq)
                 
             
+            # keep track of trial variables (e.g. task)
+            if 'task' in probe_types:
+                self.probes['task'] = tasks[idx]
+            
+            # store step-by-step variables (e.g. h, pos etc.)
             for key in probe_types:
                 session_probes[key].append(self.probes[key]) # append array to list
                 

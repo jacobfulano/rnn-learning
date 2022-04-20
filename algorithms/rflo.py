@@ -125,14 +125,14 @@ class RFLO(LearningAlgorithm):
         
         
         if 'w_rec' in self.apply_to: 
-            self.p = (1-1/rnn.tau_rec)*self.p
-            self.p += np.outer(rnn.df(rnn.u), rnn.h_prev)/rnn.tau_rec
+            self.p = (1-rnn.dt/rnn.tau_rec)*self.p
+            self.p += np.outer(rnn.df(rnn.u), rnn.h_prev)*rnn.dt/rnn.tau_rec
         if 'w_in' in self.apply_to:
-            self.q = (1-1/rnn.tau_rec)*self.q
-            self.q += np.outer(rnn.df(rnn.u), rnn.x_in_prev)/rnn.tau_rec  
+            self.q = (1-rnn.dt/rnn.tau_rec)*self.q
+            self.q += np.outer(rnn.df(rnn.u), rnn.x_in_prev)*rnn.dt/rnn.tau_rec  
         if 'w_fb' in self.apply_to:
-            self.p_fb = (1-1/rnn.tau_rec)*self.p_fb
-            self.p_fb += np.outer(rnn.df(rnn.u), rnn.pos)/rnn.tau_rec
+            self.p_fb = (1-rnn.dt/rnn.tau_rec)*self.p_fb
+            self.p_fb += np.outer(rnn.df(rnn.u), rnn.pos)*rnn.dt/rnn.tau_rec
             
             # TODO: Correct for velocity transformation (check)
             #self.p_fb += np.outer(rnn.df(rnn.u), rnn.y_prev)/rnn.tau_rec

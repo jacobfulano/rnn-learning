@@ -117,7 +117,6 @@ class REINFORCE(LearningAlgorithm):
         TODO: Implement for
             dw_out: change in the output weights
             dw_in: change in input weights
-            dw_fb: change in feedback weights
         """
         
         """ Keep separate running average for each task """
@@ -136,12 +135,12 @@ class REINFORCE(LearningAlgorithm):
         
         """ update must include noise rnn.xi inject to network recurrent layer """
         if 'w_rec' in self.apply_to: 
-            self.p = (1-1/rnn.tau_rec)*self.p
-            self.p += np.outer(rnn.xi*rnn.df(rnn.u), rnn.h_prev)/rnn.tau_rec
+            self.p = (1-rnn.dt/rnn.tau_rec)*self.p 
+            self.p += np.outer(rnn.xi*rnn.df(rnn.u), rnn.h_prev)*rnn.dt/rnn.tau_rec
         
         if 'w_fb' in self.apply_to:
-            self.p_fb = (1-1/rnn.tau_rec)*self.p_fb
-            self.p_fb += np.outer(rnn.xi*rnn.df(rnn.u), rnn.pos)/rnn.tau_rec
+            self.p_fb = (1-rnn.dt/rnn.tau_rec)*rnn.dt*self.p_fb
+            self.p_fb += np.outer(rnn.xi*rnn.df(rnn.u), rnn.pos)*rnn.dt/rnn.tau_rec
             
 
         # BONUS
@@ -199,7 +198,7 @@ class REINFORCE(LearningAlgorithm):
         if index == task.trial_duration-1:
             
             self.r_av_prev[task_idx] = self.r_av[task_idx]
-            self.r_av[task_idx] = self.r_av_prev[task_idx] + (1/self.tau_reward) * (rnn.r_current-self.r_av_prev[task_idx])
+            self.r_av[task_idx] = self.r_av_prev[task_idx] + (rnn.dt/self.tau_reward) * (rnn.r_current-self.r_av_prev[task_idx])
             
             self.reset_learning_vars() # important for offline learning
             

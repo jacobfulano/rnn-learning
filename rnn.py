@@ -66,6 +66,15 @@ class RNNparams():
     sig_out: float
 
     tau_rec: float
+    
+    """ integration timescale of simulation 
+    
+    Note that if this value is changed to something other than 1, it affects
+    the simulation in 2 locations:
+    - the recurrent activity update, which is scaled by dt/tau_rec
+    - the recurrent noise xi, which is scaled by sqrt(dt)
+    """
+    dt: Optional[float] = 1.0
         
     """ learning rates for each population """
     # note that this does not mean that the RNN necessarily learns
@@ -258,7 +267,7 @@ class RNN():
         #self.xi = self.sig_rec*self.rng.randn(self.n_rec,1)
         self.xi = self._generate_recurrent_noise()
         
-        self.h = self.h + (-self.h + self.f(self.u) + self.xi)/self.tau_rec
+        self.h = self.h + (-self.h + self.f(self.u) + self.xi)*self.dt/self.tau_rec
         #self.h = self.h + (-self.h + self.f(self.u) + self.sig_rec*self.rng.randn(self.n_rec,1))/self.tau_rec
         
         self.x_in = x_in
@@ -305,7 +314,7 @@ class RNN():
         which must be less than or equal to number of units. 
 
         Returns:
-        xi: vector of dimension n_rec
+        xi: vector of dimension n_rec, divided by square root of integration step dt
         
         Note: the noise projection matrix is constant for an RNN instantiation. This speeds up
         computation, but also means that the same recurrent units will co-vary
@@ -319,7 +328,7 @@ class RNN():
         else:
             xi = self.sig_rec * v
 
-        return xi
+        return xi/np.sqrt(self.dt)
 
 
 

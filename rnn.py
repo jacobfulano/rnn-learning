@@ -191,7 +191,7 @@ class RNN():
         """ Initialize all weights with random number generator """
     
         self.w_in = self.g_in*(self.rng.rand(self.n_rec, self.n_in) - 1) # changed from 0.1
-        self.w_rec = self.g_rec*self.rng.randn(self.n_rec, self.n_rec)/self.n_rec**0.5 # --> 1 changed from 1.5 # why randn instead of rand?
+        self.w_rec = self.g_rec*self.rng.randn(self.n_rec, self.n_rec)/self.n_rec**0.5
         self.w_out = self.g_out*(2*self.rng.rand(self.n_out, self.n_rec) - 1)/self.n_rec**0.5 
         
         self.w_m = np.copy(self.w_out).T # CHANGE THIS

@@ -1,0 +1,21 @@
+params for stats_rflo_m
+
+
+params = RNNparams(n_in=4,n_rec=50,n_out=2,tau_rec=10,
+               eta_in=0.1,eta_rec=0.1,eta_out=0.1,
+               sig_in=0.0,sig_rec=0.25,sig_out=0.01,
+               velocity_transform=False, tau_vel = 0.8, dt_vel = 0.1,
+               rng=np.random.RandomState(72))
+               
+               
+               
+seeds = [0,22,33,47] #,54,72,81]
+overlaps = [0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]
+n_changes = [75,75,60,50,50,50,30,30,1]
+overlap_w_out0 = 0.5
+n_change_w_out0 = 50
+
+M norm: 1.43	 M angle: 0.21, 4 iterations
+w_out1 norm: 1.52	 w_out vs. w_out1 angle: 0.51
+w_m norm: 1.43	 w_out1 vs. w_m angle: 0.21
+w_m norm: 1.92	 w_out vs. w_m angle: 0.05

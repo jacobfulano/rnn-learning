@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FixedLocator,FixedFormatter
+
 
 # analysis
 from sklearn.decomposition import PCA, FactorAnalysis
@@ -148,3 +150,62 @@ def plot_trained_trajectories(sim, tasks: List[Task],colors=cycle(['teal','C4','
     return fig
 
     
+    
+    
+    
+    
+    
+    
+    
+    
+    
+def paper_format(fig,ax,xlabels=None,ylabels=None,labelsize=12,ticksize=10,linewidth=2,ylim=[0,1],figsize=(2.5,2.5)):
+    
+    """ Format Figure for Paper 8.5 x 11 
+    
+    This allows for quick reformatting of figures
+    
+    Args
+    ----
+    labelsize
+    ticksize
+    linewidth
+    ylim
+    figsize
+    
+    Returns
+    -------
+    fig
+    ax
+    
+    TO DO: Need to be able to set linewidth
+    """
+    
+    ax.set_ylim(ylim)
+    
+    fig.set_figheight(figsize[0])
+    fig.set_figwidth(figsize[1])
+    
+    ax.xaxis.label.set_size(labelsize)
+    ax.yaxis.label.set_size(labelsize)
+    
+    ax.tick_params(axis='x', labelsize=ticksize)
+    ax.tick_params(axis='y', labelsize=ticksize)
+    
+    ax.set_title(ax.get_title(),fontsize=labelsize)
+    
+    """ for small figures """
+    if xlabels:
+        ax.xaxis.set_major_locator(FixedLocator(xlabels))
+        ax.xaxis.set_major_formatter(FixedFormatter(xlabels))
+    
+    if ylabels:
+        ax.yaxis.set_major_locator(FixedLocator(ylabels))
+        ax.yaxis.set_major_formatter(FixedFormatter(ylabels))
+    
+    if ax.get_legend_handles_labels()[1] != []:
+        ax.legend(prop={"size":labelsize})
+        
+    plt.tight_layout()
+
+    return fig,ax

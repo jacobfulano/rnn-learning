@@ -170,29 +170,27 @@ class RNN():
             self.sig_rec_dim = self.n_rec # dimension of recurrent noise
             
         assert self.sig_rec_dim <= self.n_rec, 'recurrent noise dimension must be less than or equal to number of recurrent units'
+            
+        """ generate covariance matrix for recurrent noise
+        this is used for sampling a multivariate gaussian via rng.multivariate_normal(mean,cov)"""
         
-        # TO DO - MAYBE REMOVE THIS METHOD AND JUST USE COVARIANCE MATRIX METHOD INSTEAD <<<<<<<<<<<<<<<<<<<<
-        # generate projection matrix for low-D recurrent noise
-        if self.sig_rec_dim <= self.n_rec:
-            """ project on to all units with matrix P """
-            P = np.zeros((self.n_rec,self.sig_rec_dim)) 
-
-            # for each row, randomly insert 1
-            for p in P:
-                ind = self.rng.choice(np.arange(self.sig_rec_dim,dtype=int),1)
-                p[ind] = 1
-                
-            self.noise_projection_matrix = P
+        # scenario1 - full rank, isotropic noise
+        if sig_rec_covariance is None and self.sig_rec_dim == self.n_rec:
+            self.sig_rec_covariance = self.sig_rec * np.eye(self.n_rec) # isotropic sample
             
-            assert self.sig_rec_dim >= self.n_rec, 'THIS METHOD NO LONGER WORKS - SPECIFY sig_rec_covariance INSTEAD'
-            
-        # generate covariance matrix for recurrent noise
-        # this is used for sampling a multivariate gaussian via rng.multivariate_normal(mean,cov)
-        if sig_rec_covariance is None:
-            self.sig_rec_covariance = np.eye(self.n_rec) # isotropic sample
+        # scenario 2 - low-D, isotropic noise
+        elif sig_rec_covariance is None and self.sig_rec_dim < self.n_rec:
+            C = self.sig_rec * np.eye(self.n_rec)
+            ind = self.rng.choice(np.arange(self.sig_rec_dim,dtype=int),1)
+            C[ind] = 0 # set some neurons to zero
+            self.sig_rec_covariance = C
+        
+        # scenario 3 - noise is specified by covariance matrix
         else:
             assert sig_rec_covariance.shape[0] == self.n_rec, 'covariance matrix must have shape (n_rec,n_rec)'
             assert sig_rec_covariance.shape[0] == self.n_rec, 'covariance matrix must have shape (n_rec,n_rec)'
+            
+            # CHECK - NOTE THERE IS NO MULTIPLICATION BY self.sig_rec HERE
             
             self.sig_rec_covariance = sig_rec_covariance
 
@@ -318,45 +316,23 @@ class RNN():
             
     def _generate_recurrent_noise(self):
 
-        """ Generate Recurrent Noise
+        """ Generate Recurrent Noise from multivariate gaussian
 
         This function generates noise that is injected into the recurrent units.
-        Noise is sampled from a gaussian distribution, and can be low-D.
-
-
-        n_rec is the number of recurrent units, and sig_rec_dim is the dimension of noise, 
-        which must be less than or equal to number of units. 
+        Noise is sampled from a gaussian distribution, and can be nonisotropic or low-D.
 
         Returns:
         xi: vector of dimension n_rec, divided by square root of integration step dt
         
-        Note: the noise projection matrix is constant for an RNN instantiation. This speeds up
-        computation, but also means that the same recurrent units will co-vary
+        Note: It is up to the user to check that a specified covariance matrix is positive semidefinite
         """
-
-        
 
         # sample from multivariate gaussian
         mean = np.zeros(self.sig_rec_covariance.shape[0])
             
-        xi = self.sig_rec * self.rng.multivariate_normal(mean, cov=self.sig_rec_covariance, size=1).T # should be size (n_neurons,1)
+        xi = self.rng.multivariate_normal(mean, cov=self.sig_rec_covariance, size=1).T # should be size (n_neurons,1)
             
         return xi/np.sqrt(self.dt)
         
-
-        
-#         v = self.rng.randn(self.sig_rec_dim,1) # noise vector vector
-        
-#         """ if low dimensional noise is specified"""
-#         if self.sig_rec_dim < self.n_rec:
-#             xi = self.sig_rec * self.noise_projection_matrix @ v
-
-#         else:
-#             xi = self.sig_rec * v
-                
-        
-
-#         return xi/np.sqrt(self.dt)
-
 
 

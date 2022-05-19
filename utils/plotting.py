@@ -157,9 +157,7 @@ def plot_trained_trajectories(sim, tasks: List[Task],colors=cycle(['teal','C4','
     
     
     
-    
-    
-def paper_format(fig,ax,xlabels=None,ylabels=None,labelsize=12,ticksize=10,linewidth=2,ylim=[0,1],figsize=(2.5,2.5)):
+def paper_format(fig,ax,xlabels=None,ylabels=None,labelsize=10,ticksize=10,linewidth=2,xlim=None,ylim=[0,1],figsize=(2.5,2.5),tight_layout=True):
     
     """ Format Figure for Paper 8.5 x 11 
     
@@ -181,10 +179,15 @@ def paper_format(fig,ax,xlabels=None,ylabels=None,labelsize=12,ticksize=10,linew
     TO DO: Need to be able to set linewidth
     """
     
-    ax.set_ylim(ylim)
+    
     
     fig.set_figheight(figsize[0])
     fig.set_figwidth(figsize[1])
+    
+    ax.set_ylim(ylim)
+    
+    if xlim is not None:
+        ax.set_xlim(xlim)
     
     ax.xaxis.label.set_size(labelsize)
     ax.yaxis.label.set_size(labelsize)
@@ -205,7 +208,8 @@ def paper_format(fig,ax,xlabels=None,ylabels=None,labelsize=12,ticksize=10,linew
     
     if ax.get_legend_handles_labels()[1] != []:
         ax.legend(prop={"size":labelsize})
-        
-    plt.tight_layout()
+    
+    if tight_layout:
+        fig.tight_layout()
 
     return fig,ax

@@ -1,3 +1,4 @@
+from email import generator
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -16,7 +17,7 @@ import logging
 import warnings
 import dataclasses
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 # custom
 from rnn import RNNparams, RNN
@@ -24,6 +25,7 @@ from utils.plotting import plot_position, plot_loss
 from task import Task
 from algorithms.base import LearningAlgorithm
 from utils.functions import rgetattr
+from psychrnnEdit.backend.curriculum import Curriculum
 
 mpl.rcParams.update({'font.size': 14}) # set default font size
 
@@ -44,7 +46,7 @@ class Simulation():
         self.rnn = rnn
         
         
-    def run_session(self, n_trials: int, tasks: List[Task], learn_alg: List[str], probe_types: List[str], plot: bool = True, plot_freq: int = 10, train: bool = True) -> None:
+    def run_session(self, n_trials: int, curriculum: Curriculum, curriculum_test_size: int, learn_alg: List[str], probe_types: List[str], plot: bool = True, plot_freq: int = 10, train: bool = True) -> None:
         
         """ Run a full training session
         
@@ -54,7 +56,8 @@ class Simulation():
         
         Args:
             n_trials (int): number of total trials
-            tasks (list): list of Task objects
+            curriculum (psychrnn Curriculum object): psychrnn Curriculum object
+            curriculum_test_size (int): how many trials to run to compute accuracy / curriculum advancement metric.
             learn_alg (list): list of LearningAlgorithm objects specified for a set of weights
             probe_types (list): list of rnn attributes to monitor
             plot (bool): whether to plot trajectories during session
@@ -66,9 +69,6 @@ class Simulation():
         for key in probe_types:
             session_probes[key] = []
         
-        """ Shuffle Indices for tasks """
-        idxs = self.rnn.rng.choice(np.arange(0,len(tasks)), size=n_trials) # shuffle presentation of stimuli
-        
         # keeping track of probes for plotting during session
         # The user doesn't have to store pos or loss in order to plot them)
         probe_types_all = probe_types
@@ -78,6 +78,8 @@ class Simulation():
             fig1 = plt.figure(figsize=(6,5))
             if 'pos' not in probe_types:
                 probe_types_all = probe_types_all + ['pos'] # append
+            if 'y_out' not in probe_types:
+                probe_types_all = probe_types_all + ['y_out'] # append
                 
             for alg in learn_alg:
                 
@@ -117,11 +119,11 @@ class Simulation():
             
         
         
-        
-        for count,idx in tqdm(enumerate(idxs)):
+        cur_generator = curriculum.get_generator_function()
+        for count in range(n_trials):
             
             """ Run a single trial """
-            self.run_trial(tasks[idx],learn_alg=learn_alg,probe_types=probe_types_all,train=train)
+            self.run_trial(next(cur_generator),learn_alg=learn_alg,probe_types=probe_types_all,train=train)
             
             if plot:
                 if 'loss' in probe_types_all:
@@ -129,16 +131,33 @@ class Simulation():
                 if 'reward' in probe_types_all:
                     reward.append(np.mean(self.probes['reward']))
             if plot and count % plot_freq == 0:
-                fig1 = plot_position(fig=fig1, pos=self.probes['pos'], tasks = tasks, count=count, n_trials=n_trials, plot_freq=plot_freq)
+                fig1 = plot_position(fig=fig1, pos=self.probes['pos'], tasks = tasks, count=count, n_trials=n_trials, plot_freq=plot_freq) #TODO
                 
             
             # keep track of trial variables (e.g. task)
             if 'task' in probe_types:
-                self.probes['task'] = tasks[idx]
+                self.probes['task'] = curriculum.stage
             
             # store step-by-step variables (e.g. h, pos etc.)
             for key in probe_types:
                 session_probes[key].append(self.probes[key]) # append array to list
+
+
+            if count % curriculum.metric_epoch == 0:
+                metric_gen = curriculum.get_generator_function()
+                x,y,_,_ = next(metric_gen) # to get the shapes, hacky 
+                trial_batch = np.zeros((curriculum_test_size,x.shape[1],x.shape[2])) 
+                trial_y = np.zeros((curriculum_test_size,y.shape[1],y.shape[2]))
+                output_mask = np.zeros(trial_y.shape)
+                output = np.zeros(trial_y.shape)
+                for i in range(curriculum_test_size):
+                    task_tup = trial_batch[i], trial_y[i], output_mask[i], _ = next(metric_gen)
+                    self.run_trial(task_tup,learn_alg=learn_alg,probe_types=probe_types_all,train=False)
+                    output[i]= self.probes['y_out'] # make sure this is time by y var not teh other way around, do transposes if necessary
+                if curriculum.metric_test(trial_batch, trial_y, output_mask, output, count, self.probes, self, False):
+                    if curriculum.stop_training:
+                        break
+                    cur_generator = curriculum.get_generator_function()
                 
         self.session_probes = session_probes
         
@@ -149,7 +168,7 @@ class Simulation():
                 plot_loss(loss=reward,yscale='linear',title='Reward',ylabel='Reward',label=' '.join([alg.name for alg in learn_alg]))
         
     
-    def run_trial(self, task: Task, 
+    def run_trial(self, task: Tuple, 
                   train: bool=True, 
                   learn_alg: List[LearningAlgorithm]=[], 
                   probe_types: List[str]=[]) -> None:
@@ -164,10 +183,11 @@ class Simulation():
             learn_alg (list): list of LearningAlgorithm objects that specify the learning rules for a set of weights
             probe_types (list): list of rnn properties to monitor (e.g. 'pos')
         """
+        x, y, mask, params = task
         
-        assert self.rnn.n_in == task.x_in.shape[1], 'Task non temporal input must match RNN input dimensions'
+        assert self.rnn.n_in == x.shape[2], 'Task non temporal input must match RNN input dimensions'
         
-        assert task.y_target.shape == self.rnn.pos.shape, 'task.y_target must have dimensions '.format(self.rnn.pos.shape)
+        assert y[0,:,:].shape == self.rnn.pos.shape, 'task.y_target must have dimensions '.format(self.rnn.pos.shape)
         
         if train and not learn_alg:
             raise AssertionError('If training, need to specify learning algorithm')
@@ -179,9 +199,9 @@ class Simulation():
         self.probes = {probe:[] for probe in self.probe_types}
         
         """ Begin Trial """
-        for tt in range(task.trial_duration):
+        for tt in range(x.shape[1]):
             
-            self.forward_step(task.x_in[tt]) # the only value passed in is external input at time tt
+            self.forward_step(x[:,tt,:]) # the only value passed in is external input at time tt
             
             """ training step """
             # if offline training, then the weight update will only occur at the end of the trial
@@ -206,7 +226,7 @@ class Simulation():
         rnn.output()
 
         
-    def train_step(self,index: int, train: bool, task: Task):
+    def train_step(self,index: int, train: bool, task: Task): #TODO make this take a psychrnn task.
         
         """ Apply Training Step 
         

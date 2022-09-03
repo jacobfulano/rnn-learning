@@ -153,7 +153,7 @@ class Simulation():
                 for i in range(curriculum_test_size):
                     task_tup = trial_batch[i], trial_y[i], output_mask[i], _ = next(metric_gen)
                     self.run_trial(task_tup,learn_alg=learn_alg,probe_types=probe_types_all,train=False)
-                    output[i]= self.probes['y_out'] # make sure this is time by y var not teh other way around, do transposes if necessary
+                    output[i]= self.probes['y_out'].squeeze() # make sure this is time by y var not teh other way around, do transposes if necessary
                 if curriculum.metric_test(trial_batch, trial_y, output_mask, output, count, self.probes, self, False):
                     if curriculum.stop_training:
                         break
@@ -184,10 +184,12 @@ class Simulation():
             probe_types (list): list of rnn properties to monitor (e.g. 'pos')
         """
         x, y, mask, params = task
+        x = x[0,:,:]
+        y = y[0,-1:,:].T # TODO only works with tasks where end state is the target.
         
-        assert self.rnn.n_in == x.shape[2], 'Task non temporal input must match RNN input dimensions'
+        assert self.rnn.n_in == x.shape[1], 'Task non temporal input must match RNN input dimensions'
         
-        assert y[0,:,:].shape == self.rnn.pos.shape, 'task.y_target must have dimensions '.format(self.rnn.pos.shape)
+        assert y.shape == self.rnn.pos.shape, 'task.y_target must have dimensions '.format(self.rnn.pos.shape)
         
         if train and not learn_alg:
             raise AssertionError('If training, need to specify learning algorithm')
@@ -199,9 +201,9 @@ class Simulation():
         self.probes = {probe:[] for probe in self.probe_types}
         
         """ Begin Trial """
-        for tt in range(x.shape[1]):
+        for tt in range(x.shape[0]):
             
-            self.forward_step(x[:,tt,:]) # the only value passed in is external input at time tt
+            self.forward_step(x[tt]) # the only value passed in is external input at time tt
             
             """ training step """
             # if offline training, then the weight update will only occur at the end of the trial

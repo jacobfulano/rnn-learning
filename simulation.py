@@ -240,7 +240,12 @@ class Simulation():
             train (bool): whether in training mode
             task (Task): a single Task object
         """
-        
+        x,y, mask, _ = task
+        if np.sum(mask[0,index]) == 0: # if mask is all false, skip training
+            self.rnn.loss = self.rnn.err = 0
+            return
+        assert np.sum(mask[0,index])  == mask[0,index].shape[0]# mask should all be true, if not, this code will treat it all as true anyhow so be careful.
+        task = Task(x[0], y[0,index:index+1].T)
         for learn_alg in self.learn_alg:
             learn_alg.update_learning_vars(index,task)
         

@@ -131,7 +131,7 @@ class Simulation():
                 if 'reward' in probe_types_all:
                     reward.append(np.mean(self.probes['reward']))
             if plot and count % plot_freq == 0:
-                fig1 = plot_position(fig=fig1, pos=self.probes['pos'], tasks = tasks, count=count, n_trials=n_trials, plot_freq=plot_freq) #TODO
+                fig1 = plot_position(fig=fig1, pos=self.probes['pos'], count=count, n_trials=n_trials, plot_freq=plot_freq) #TODO
                 
             
             # keep track of trial variables (e.g. task)
@@ -228,7 +228,7 @@ class Simulation():
         rnn.output()
 
         
-    def train_step(self,index: int, train: bool, task: Task): #TODO make this take a psychrnn task.
+    def train_step(self,index: int, train: bool, task: Task):
         
         """ Apply Training Step 
         
@@ -238,16 +238,12 @@ class Simulation():
         Args:
             index (int): the trial step
             train (bool): whether in training mode
-            task (Task): a single Task object
+            task (Tuple): x, y, mask, params tuple from next(generator)
         """
         x,y, mask, _ = task
-        if np.sum(mask[0,index]) == 0: # if mask is all false, skip training
-            self.rnn.loss = self.rnn.err = 0
-            return
-        assert np.sum(mask[0,index])  == mask[0,index].shape[0]# mask should all be true, if not, this code will treat it all as true anyhow so be careful.
         task = Task(x[0], y[0,index:index+1].T)
         for learn_alg in self.learn_alg:
-            learn_alg.update_learning_vars(index,task)
+            learn_alg.update_learning_vars(index,task, mask[0, index:index+1].T)
         
         
     def update_probes(self):

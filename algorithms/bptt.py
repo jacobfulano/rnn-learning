@@ -1,3 +1,4 @@
+from array import array
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -96,7 +97,7 @@ class BPTT(LearningAlgorithm):
         # TO DO: log error function
         
     
-    def update_learning_vars(self, index: int, task: Task):
+    def update_learning_vars(self, index: int, task: Task, mask: array ):
         
         """
         Update variables associated with learning
@@ -123,7 +124,8 @@ class BPTT(LearningAlgorithm):
         
         """ Error based on final target position """
         # scaled error based on time left in trial
-        rnn.err = (1/(t_max-index)) * (task.y_target - rnn.pos)
+        rnn.err = (task.y_target - rnn.pos)*mask
+        
         rnn.loss = 0.5*np.linalg.norm(rnn.err)**2
         
         self.err_history.append(np.copy(rnn.err))
@@ -132,14 +134,14 @@ class BPTT(LearningAlgorithm):
         self.h_history.append(np.copy(rnn.h))
         
         # TODO: Alternative errors
-        #rnn.err = (index/task.trial_duration) * (task.y_target - rnn.pos)/np.linalg.norm(task.y_target - rnn.pos)
-        #rnn.err = (task.y_target - rnn.pos)
+        #rnn.err = (index/task.trial_duration) * (task.y_target - rnn.pos)/np.linalg.norm(task.y_target - rnn.pos)*mask
+        # rnn.err = (1/(t_max-index)) * (task.y_target - rnn.pos)*mask
                 
         # For BPTT, only update at end of the trial
         if index == t_max-1:
             
             # convert to np.array
-            self.err_history = np.asarray(self.err_history).squeeze() # should be size np.zeros((t_max, self.rnn.n_out))
+            self.err_history = np.asarray(self.err_history).squeeze() # should be size np.zeros((t_max, number of unmasked timesteps in trial))
             self.x_in_history = np.asarray(self.x_in_history).squeeze()
             self.h_history = np.asarray(self.h_history).squeeze()
             self.u_history = np.asarray(self.u_history).squeeze()
@@ -147,6 +149,7 @@ class BPTT(LearningAlgorithm):
             z = np.zeros((t_max, rnn.n_rec))
             #z[-1] = np.dot((rnn.w_out).T, self.err_history[-1])
             z[-1] = np.dot(rnn.w_m, self.err_history[-1]) # note w_m here
+
             
             # Loop backwards through timesteps
             for tt in range(t_max-1, 0, -1):

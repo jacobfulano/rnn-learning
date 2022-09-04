@@ -80,7 +80,7 @@ def insert_colorbar(fig,colormap='viridis',top_label='late',bottom_label='early'
 
 
 
-def plot_position(fig, pos, tasks: List[Task], count: Optional[int] = None, n_trials: Optional[int] = None, plot_freq: Optional[int] = None, **kwargs):
+def plot_position(fig, pos,  count: Optional[int] = None, n_trials: Optional[int] = None, plot_freq: Optional[int] = None, **kwargs):
     
     
     
@@ -103,8 +103,8 @@ def plot_position(fig, pos, tasks: List[Task], count: Optional[int] = None, n_tr
     
     #ax.set_title('RFLO, velocity={}, learning {}, {} trials'.format(net.velocity_transform,rflo.apply_to,i))
     
-    for task in tasks:
-        ax.scatter(task.y_target[0,:],task.y_target[1,:],s=100,marker='x',color='k')
+    # for task in tasks:
+    #     ax.scatter(task.y_target[0,:],task.y_target[1,:],s=100,marker='x',color='k')
     ax.scatter(0,0,s=100,marker='x',color='k')
     ax.set_xlim(-1.5,1.5)
     ax.set_ylim(-1.5,1.5)

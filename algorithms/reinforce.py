@@ -1,3 +1,4 @@
+from array import array
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -102,7 +103,7 @@ class REINFORCE(LearningAlgorithm):
         # self.bonus = 0
         
     
-    def update_learning_vars(self, index: int, task: Task):
+    def update_learning_vars(self, index: int, task: Task, mask: array):
         
         """
         Update variables associated with learning
@@ -151,7 +152,7 @@ class REINFORCE(LearningAlgorithm):
 #                 self.bonus += 1
         
         """ Reward based on final target position """
-        rnn.err = task.y_target-rnn.pos
+        rnn.err = (task.y_target-rnn.pos)*mask
         rnn.r_current = -(np.linalg.norm(rnn.err))**2 # + self.bonus  
         
         # alternative: scaled error based on time left in trial

@@ -1,3 +1,4 @@
+from array import array
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -70,7 +71,7 @@ class REINFORCE1D(LearningAlgorithm):
         assert apply_to[0] == 'w_rec', 'REINFORCE only currently implemented for w_rec' 
         
     
-    def update_learning_vars(self, index: int, task: Task):
+    def update_learning_vars(self, index: int, task: Task, mask: array):
         
         """
         Update variables associated with learning
@@ -100,7 +101,7 @@ class REINFORCE1D(LearningAlgorithm):
         self.p += np.outer(rnn.xi*df(rnn.u), rnn.h_prev)/rnn.tau_rec
 
             
-        rnn.r_current = -(np.linalg.norm(task.y_target-rnn.pos))**2
+        rnn.r_current = -(np.linalg.norm(task.y_target-rnn.pos)*mask)**2
             
         
         

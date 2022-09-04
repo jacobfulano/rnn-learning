@@ -1,3 +1,4 @@
+from array import array
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -89,7 +90,7 @@ class RFLO(LearningAlgorithm):
         
                 
     
-    def update_learning_vars(self, index: int, task: Task):
+    def update_learning_vars(self, index: int, task: Task, mask: array):
         
         """
         Update variables associated with learning
@@ -116,13 +117,13 @@ class RFLO(LearningAlgorithm):
         
         """ Error based on final target position """
         # scaled error based on time left in trial
-        # rnn.err = (1/(task.trial_duration-index)) * (task.y_target - rnn.pos)
-        rnn.err = (task.y_target - rnn.pos) #TODO(Jasmine): use this error everywhere
+        
+        rnn.err = (task.y_target - rnn.pos)*mask 
         rnn.loss = 0.5*np.linalg.norm(rnn.err)**2
         
         # TODO: Alternative errors
         #rnn.err = (index/task.trial_duration) * (task.y_target - rnn.pos)/np.linalg.norm(task.y_target - rnn.pos)
-        
+        # rnn.err = (1/(task.trial_duration-index)) * (task.y_target - rnn.pos)
         
         
         if 'w_rec' in self.apply_to: 

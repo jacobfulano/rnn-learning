@@ -17,7 +17,7 @@ import logging
 import warnings
 import dataclasses
 from dataclasses import dataclass
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Union
 
 # custom
 from rnn import RNNparams, RNN
@@ -46,7 +46,7 @@ class Simulation():
         self.rnn = rnn
         
         
-    def run_session(self, n_trials: int, curriculum: Curriculum, curriculum_test_size: int, learn_alg: List[str], probe_types: List[str], plot: bool = True, plot_freq: int = 10, train: bool = True) -> None:
+    def run_session(self, n_trials: int, curriculum: Curriculum, curriculum_test_size: int, learn_alg: List[str], probe_types: List[str], plot: bool = True, plot_freq: int = 10, train: bool = True, save_weights_path: Union[bool, str]=False) -> None:
         
         """ Run a full training session
         
@@ -161,6 +161,8 @@ class Simulation():
                 
         self.session_probes = session_probes
         
+        if save_weights_path:
+            self.rnn.save_weights(save_weights_path)
         if plot:
             if 'loss' in probe_types_all:
                 plot_loss(loss=loss,yscale='log',label=' '.join([alg.name for alg in learn_alg]))

@@ -131,13 +131,15 @@ class RNN():
         init (boolean): if true, initialize weights. default=True
     """
     
-    def __init__(self, params: RNNparams,init=True, f=f, df=df, sig_rec_covariance=None) -> None:
+    def __init__(self, params: RNNparams,init=True, f=f, df=df, sig_rec_covariance=None, load_weights_file=False) -> None:
         for key, value in dataclasses.asdict(params).items():
             setattr(self, key, value)
-        
-        if init:
+            
+        if load_weights_file:
+            self.load_weights(load_weights_file)
+        elif init:
             self.initialize_weights()
-        
+
         # Initialize
         self.x_in = 0
         self.h0 = np.zeros((self.n_rec,1)) # initial activity of the RNN
@@ -210,6 +212,29 @@ class RNN():
         
         if self.driving_feedback:
             self.w_fb = self.g_fb*self.rng.randn(self.n_rec,self.n_out)/self.n_rec**0.5
+
+    def get_weights(self):
+        if self.driving_feedback:
+            return {
+                "w_in": self.w_in,
+                "w_rec": self.w_rec,
+                "w_out": self.w_out,
+                "w_m": self.w_m,
+                "w_fb": self.w_fb
+            }
+        return {
+            "w_in": self.w_in,
+            "w_rec": self.w_rec,
+            "w_out": self.w_out,
+            "w_m": self.w_m,
+        }
+
+
+    def save_weights(self, file):
+        np.savez(file, **self.get_weights())
+
+    def load_weights(self, file):
+        self.set_weights(**np.load(file))
 
     def set_weights(self, 
                     w_in: Optional[np.array]=None, 

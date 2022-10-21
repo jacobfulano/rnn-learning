@@ -25,7 +25,7 @@ from utils.plotting import plot_position, plot_loss
 from task import Task
 from algorithms.base import LearningAlgorithm
 from utils.functions import rgetattr
-from psychrnnEdit.backend.curriculum import Curriculum
+from psychrnn.backend.curriculum import Curriculum
 
 mpl.rcParams.update({'font.size': 14}) # set default font size
 

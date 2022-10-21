@@ -67,7 +67,7 @@ class Simulation():
             session_probes[key] = []
         
         """ Shuffle Indices for tasks """
-        idxs = self.rnn.rng.choice(np.arange(0,len(tasks)), size=n_trials) # shuffle presentation of stimuli
+        self.task_idxs = self.rnn.rng.choice(np.arange(0,len(tasks)), size=n_trials) # shuffle presentation of stimuli
         
         # keeping track of probes for plotting during session
         # The user doesn't have to store pos or loss in order to plot them)
@@ -118,7 +118,7 @@ class Simulation():
         
         
         
-        for count,idx in tqdm(enumerate(idxs)):
+        for count,idx in tqdm(enumerate(self.task_idxs)):
             
             """ Run a single trial """
             self.run_trial(tasks[idx],learn_alg=learn_alg,probe_types=probe_types_all,train=train)
@@ -144,7 +144,7 @@ class Simulation():
         
         if plot:
             if 'loss' in probe_types_all:
-                plot_loss(loss=loss,yscale='log',label=' '.join([alg.name for alg in learn_alg]))
+                plot_loss(loss=loss,yscale='linear',label=' '.join([alg.name for alg in learn_alg]))
             if 'reward' in probe_types_all:
                 plot_loss(loss=reward,yscale='linear',title='Reward',ylabel='Reward',label=' '.join([alg.name for alg in learn_alg]))
         

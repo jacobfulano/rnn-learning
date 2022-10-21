@@ -126,7 +126,7 @@ class BPTT(LearningAlgorithm):
         rnn.err = (1/(t_max-index)) * (task.y_target - rnn.pos)
         rnn.loss = 0.5*np.linalg.norm(rnn.err)**2
         
-        self.err_history.append(np.copy(rnn.err))
+        self.err_history.append(np.copy(rnn.err)) # for BPTT, need to keep track of full history (not just 1 timestep)
         self.u_history.append(np.copy(rnn.u))
         self.x_in_history.append(np.copy(rnn.x_in))
         self.h_history.append(np.copy(rnn.h))
@@ -145,7 +145,14 @@ class BPTT(LearningAlgorithm):
             self.u_history = np.asarray(self.u_history).squeeze()
             
             z = np.zeros((t_max, rnn.n_rec))
-            #z[-1] = np.dot((rnn.w_out).T, self.err_history[-1])
+            
+            # For standard backpropagation through time, the update should look like this:
+            #
+            # >> z[-1] = np.dot((rnn.w_out).T, self.err_history[-1])
+            #
+            # However, since we want to dissociate the matrix used in the forward pass from
+            # the matrix used in the backward pass, we use rnn.w_m instead
+            
             z[-1] = np.dot(rnn.w_m, self.err_history[-1]) # note w_m here
             
             # Loop backwards through timesteps
@@ -184,7 +191,9 @@ class BPTT(LearningAlgorithm):
                 
             self.reset_learning_vars()
 
-    # TODO: define this function
+            
+            
+            
     def reset_learning_vars(self):
                 
         self.err_history = [] 

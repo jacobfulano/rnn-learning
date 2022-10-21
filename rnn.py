@@ -176,11 +176,11 @@ class RNN():
         
         # scenario1 - full rank, isotropic noise
         if sig_rec_covariance is None and self.sig_rec_dim == self.n_rec:
-            self.sig_rec_covariance = self.sig_rec * np.eye(self.n_rec) # isotropic sample
+            self.sig_rec_covariance = self.sig_rec * np.eye(self.n_rec) # isotropic sample # note that this is sig_rec and not sig_rec**2
             
         # scenario 2 - low-D, isotropic noise
         elif sig_rec_covariance is None and self.sig_rec_dim < self.n_rec:
-            C = self.sig_rec * np.eye(self.n_rec)
+            C = self.sig_rec * np.eye(self.n_rec) # note that this is sig_rec and not sig_rec**2
             ind = self.rng.choice(np.arange(self.sig_rec_dim,dtype=int),1)
             C[ind] = 0 # set some neurons to zero
             self.sig_rec_covariance = C

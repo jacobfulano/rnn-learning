@@ -46,7 +46,7 @@ class REINFORCE(LearningAlgorithm):
     TODO: Currently only implemented for w_rec. Need to implement for w_in, w_fb and w_out. Also could implement sporadic reward    
     """
     
-    def __init__(self, rnn: RNN, tau_reward: float, apply_to: List[str]=['w_rec'], online: bool = True) -> None:
+    def __init__(self, rnn: RNN, tau_reward: float, apply_to: List[str]=['w_rec'], online: bool = True, error_fn: str = 'distance') -> None:
         
         
         
@@ -89,6 +89,7 @@ class REINFORCE(LearningAlgorithm):
         self.name='REINFORCE'
         self.apply_to = apply_to
         self.online = online
+        self.error_fn = error_fn
                 
         #assert apply_to[0] == 'w_rec', 'REINFORCE only currently implemented for w_rec' 
         
@@ -150,12 +151,9 @@ class REINFORCE(LearningAlgorithm):
 #                 #bonus = bonus_amount
 #                 self.bonus += 1
         
-        """ Reward based on final target position """
-        rnn.err = task.y_target-rnn.pos
+        """ Reward as scalar error """
+        rnn.err = self._error(task,index)
         rnn.r_current = -(np.linalg.norm(rnn.err))**2 # + self.bonus  
-        
-        # alternative: scaled error based on time left in trial
-        # rnn.err = (1/(task.trial_duration-index)) * (task.y_target - rnn.pos)
        
         rnn.reward = np.copy(rnn.r_current)  # for plotting purposes, keep track of reward
                     
@@ -237,6 +235,41 @@ class REINFORCE(LearningAlgorithm):
             task_idx = len(self.all_tasks)-1
             
         return task_idx
+    
+    
+    def _error(self,task,index):
+        
+        """
+        Define error for a given task
+        
+        1. Distance to target
+            This is the vector to the target
+            
+        2. Scaled distance to target
+            This is the vector to the target scaled by the remaining number of timesteps in the trial
+            
+        3. Velocity
+            This treats the error as the difference between the correct velocity vector (distance to the target / time) 
+            and the generated velocity vector
+            
+        TODO: allow for error to be defined by target vector (e.g. a straight line)
+        """
+        
+        if self.error_fn=='distance':
+            error = task.y_target - self.rnn.pos
+        
+        if self.error_fn=='scaled_distance':
+            error = (1/(task.trial_duration-index)) * (task.y_target - self.rnn.pos)
+        
+        if self.error_fn=='velocity':
+        
+            assert self.rnn.velocity_transform, 'velocity_transform must equal True'
+            error = (task.y_target - self.rnn.pos) - self.rnn.vel
+        
+        return error
+    
+    
+    
     
     
     def print_params(self) -> None:

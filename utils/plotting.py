@@ -25,7 +25,7 @@ sys.path.append("../..")
 
 from task import Task
 
-def plot_loss(loss,fig=None,title='Loss',label='Loss',ylabel='Loss',yscale='log'):
+def plot_loss(loss,fig=None,title='Loss',label='Loss',ylabel='Loss',yscale='linear'):
     
     if not fig:
         fig = plt.figure(figsize=(6,3))
@@ -116,7 +116,7 @@ def plot_position(fig, pos, tasks: List[Task], count: Optional[int] = None, n_tr
     return fig
 
 
-def plot_trained_trajectories(sim, tasks: List[Task],colors=cycle(['teal','C4','darkblue','tomato']),num_examples:int = 4, **kwargs):
+def plot_trained_trajectories(sim, tasks: List[Task],colors=cycle(['teal','C4','darkblue','tomato','limegreen','magenta','aqua','maroon']),num_examples:int = 4, **kwargs):
     
     """ Plot trajectories after training """
     
@@ -133,6 +133,8 @@ def plot_trained_trajectories(sim, tasks: List[Task],colors=cycle(['teal','C4','
     
     for task in tasks:
         c = next(colors)
+        ax.plot(task.y_target[0,:],task.y_target[1,:],'X',color=c,markersize=10,linewidth=5)
+        
         for count in range(num_examples):
 
             sim.run_trial(task,probe_types=['h','pos'],train=False)
@@ -140,9 +142,6 @@ def plot_trained_trajectories(sim, tasks: List[Task],colors=cycle(['teal','C4','
 
     ax.set_xticks([-1,1])
     ax.set_yticks([-1,1])
-    for task in tasks:
-        c = next(colors)
-        ax.plot(task.y_target[0,:],task.y_target[1,:],'X',color='k',markersize=10,linewidth=5)
     ax.plot([0],[0],'o',color='k',markersize=10,linewidth=1)
     ax.set_title(title)
     ax.axis('off')

@@ -37,7 +37,7 @@ class RFLO(LearningAlgorithm):
     (see https://github.com/murray-lab/rflo-learning for more details)
     """
     
-    def __init__(self, rnn: RNN, apply_to: List[str]=['w_rec'], online: bool = True, weight_transport: bool = True) -> None:
+    def __init__(self, rnn: RNN, apply_to: List[str]=['w_rec'], online: bool = True, weight_transport: bool = True, error_fn: str = 'scaled_distance') -> None:
         
         """
         Initialize learning rule and set which weights to apply to
@@ -86,6 +86,7 @@ class RFLO(LearningAlgorithm):
         self.apply_to = apply_to
         self.online = online
         self.weight_transport = weight_transport
+        self.error_fn = error_fn
         
                 
     
@@ -111,17 +112,11 @@ class RFLO(LearningAlgorithm):
         rnn = self.rnn
         t_max = task.trial_duration
         
-        # TODO: Allow for predefined teaching signal for error calculation
-        #rnn.err = np.expand_dims(task.y_teaching_signal[index],1) - rnn.pos
         
         """ Error based on final target position """
-        # scaled error based on time left in trial
-        rnn.err = (1/(task.trial_duration-index)) * (task.y_target - rnn.pos)
-        rnn.loss = 0.5*np.linalg.norm(rnn.err)**2
+        rnn.err = self._error(task,index)
         
-        # TODO: Alternative errors
-        #rnn.err = (index/task.trial_duration) * (task.y_target - rnn.pos)/np.linalg.norm(task.y_target - rnn.pos)
-        #rnn.err = (task.y_target - rnn.pos)
+        rnn.loss = 0.5*np.linalg.norm(rnn.err)**2
         
         
         if 'w_rec' in self.apply_to: 
@@ -214,14 +209,48 @@ class RFLO(LearningAlgorithm):
         self.dw_out = np.zeros((self.rnn.n_out, self.rnn.n_rec))
         self.dw_fb = np.zeros((self.rnn.n_rec, self.rnn.n_out))
         
+
+                
+                
+    def _error(self,task,index):
         
+        """
+        Define error for a given task
         
+        1. Distance to target
+            This is the vector to the target
+            
+        2. Scaled distance to target
+            This is the vector to the target scaled by the remaining number of timesteps in the trial
+            
+        3. Velocity
+            This treats the error as the difference between the correct velocity vector (distance to the target / time) 
+            and the generated velocity vector
+            
+            
+        TODO: allow for error to be defined by target vector (e.g. a straight line)
+        """
+        
+        if self.error_fn=='distance':
+            error = task.y_target - self.rnn.pos
+        
+        if self.error_fn=='scaled_distance':
+            error = (1/(task.trial_duration-index)) * (task.y_target - self.rnn.pos)
+        
+        if self.error_fn=='velocity':
+        
+            assert self.rnn.velocity_transform, 'velocity_transform must equal True'
+            error = (task.y_target - self.rnn.pos) - self.rnn.vel
+        
+        return error
+    
+    
+    
     def print_params(self) -> None:
         
         """ Print Hyperparameters """
         for k in ['apply_to', 'online', 'weight_transport']:
                 print(k,': ',vars(self)[k])
-                
 
             
             

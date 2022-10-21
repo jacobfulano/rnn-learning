@@ -92,6 +92,8 @@ def flow_field_predicted(W,err_list,h_list):
     h_list: list of np.arrays, each item is h for a trial
     
     TO DO: Maybe consider alternative learning rule updates here?
+    
+    TO CHECK: Should this be divided by number of trials?
     """
     
     n_steps = h_list[0].squeeze().shape[0]

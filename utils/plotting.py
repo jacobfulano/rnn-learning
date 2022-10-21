@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FixedLocator,FixedFormatter
+
 
 # analysis
 from sklearn.decomposition import PCA, FactorAnalysis
@@ -22,6 +24,20 @@ sys.path.append("../..")
 
 
 from task import Task
+
+def plot_loss(loss,fig=None,title='Loss',label='Loss',ylabel='Loss',yscale='log'):
+    
+    if not fig:
+        fig = plt.figure(figsize=(6,3))
+        
+    plt.plot(loss,label=label)
+    plt.xlabel('Trials')
+    plt.ylabel(ylabel)
+    plt.yscale(yscale)
+    plt.title(title)
+    plt.legend()
+    
+    return fig
 
 def interp_colors(dim,colormap='viridis'):
     
@@ -64,7 +80,7 @@ def insert_colorbar(fig,colormap='viridis',top_label='late',bottom_label='early'
 
 
 
-def plot_position(fig, pos, tasks: List[Task], count: Optional[int] = None, n_trials: Optional[int] = None, plot_freq: Optional[int] = None, **kwargs):
+def plot_position(fig, pos,  count: Optional[int] = None, n_trials: Optional[int] = None, plot_freq: Optional[int] = None, **kwargs):
     
     
     
@@ -87,8 +103,8 @@ def plot_position(fig, pos, tasks: List[Task], count: Optional[int] = None, n_tr
     
     #ax.set_title('RFLO, velocity={}, learning {}, {} trials'.format(net.velocity_transform,rflo.apply_to,i))
     
-    for task in tasks:
-        ax.scatter(task.y_target[0,:],task.y_target[1,:],s=100,marker='x',color='k')
+    # for task in tasks:
+    #     ax.scatter(task.y_target[0,:],task.y_target[1,:],s=100,marker='x',color='k')
     ax.scatter(0,0,s=100,marker='x',color='k')
     ax.set_xlim(-1.5,1.5)
     ax.set_ylim(-1.5,1.5)
@@ -108,7 +124,12 @@ def plot_trained_trajectories(sim, tasks: List[Task],colors=cycle(['teal','C4','
         fig = kwargs['fig']
         ax = fig.gca()
     else:
-        fig,ax = plt.subplots(1,1,figsize=(5,5),squeeze=True)    
+        fig,ax = plt.subplots(1,1,figsize=(5,5),squeeze=True) 
+        
+    if 'title' in kwargs.keys():
+        title = kwargs['title']
+    else:
+        title = 'Trajectories after Training'
     
     for task in tasks:
         c = next(colors)
@@ -123,9 +144,72 @@ def plot_trained_trajectories(sim, tasks: List[Task],colors=cycle(['teal','C4','
         c = next(colors)
         ax.plot(task.y_target[0,:],task.y_target[1,:],'X',color='k',markersize=10,linewidth=5)
     ax.plot([0],[0],'o',color='k',markersize=10,linewidth=1)
-    ax.set_title('Trajectories after Training')
+    ax.set_title(title)
     ax.axis('off')
     
     return fig
 
     
+    
+    
+    
+    
+    
+    
+    
+def paper_format(fig,ax,xlabels=None,ylabels=None,labelsize=10,ticksize=10,linewidth=2,xlim=None,ylim=[0,1],figsize=(2.5,2.5),tight_layout=True):
+    
+    """ Format Figure for Paper 8.5 x 11 
+    
+    This allows for quick reformatting of figures
+    
+    Args
+    ----
+    labelsize
+    ticksize
+    linewidth
+    ylim
+    figsize
+    
+    Returns
+    -------
+    fig
+    ax
+    
+    TO DO: Need to be able to set linewidth
+    """
+    
+    
+    
+    fig.set_figheight(figsize[0])
+    fig.set_figwidth(figsize[1])
+    
+    ax.set_ylim(ylim)
+    
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    
+    ax.xaxis.label.set_size(labelsize)
+    ax.yaxis.label.set_size(labelsize)
+    
+    ax.tick_params(axis='x', labelsize=ticksize)
+    ax.tick_params(axis='y', labelsize=ticksize)
+    
+    ax.set_title(ax.get_title(),fontsize=labelsize)
+    
+    """ for small figures """
+    if xlabels:
+        ax.xaxis.set_major_locator(FixedLocator(xlabels))
+        ax.xaxis.set_major_formatter(FixedFormatter(xlabels))
+    
+    if ylabels:
+        ax.yaxis.set_major_locator(FixedLocator(ylabels))
+        ax.yaxis.set_major_formatter(FixedFormatter(ylabels))
+    
+    if ax.get_legend_handles_labels()[1] != []:
+        ax.legend(prop={"size":labelsize})
+    
+    if tight_layout:
+        fig.tight_layout()
+
+    return fig,ax
